@@ -1,0 +1,101 @@
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { ArrowLeft, Building2, CalendarDays, ChevronDown, MapPin, Star, Users, WalletCards } from 'lucide-react';
+import { apiGet } from '../api';
+import { useShell } from '../components/AppShell';
+import { useRouter } from '../router';
+import { PageHeader } from '../components/PageHeader';
+import { Panel } from '../components/Panel';
+import { Chart, chartGrid, chartText, tooltip } from '../components/Chart';
+import { ErrorState, LoadingState } from '../components/DataState';
+import type { ShowCard, ShowDetail } from '../types';
+import { dateTimeLabel, formatCurrency, formatNumber, shortDate } from '../utils/format';
+
+export function ShowDetailPage() {
+  const { pathname, navigate } = useRouter();
+  const id = pathname.match(/^\/shows\/(\d+)$/)?.[1] || '1';
+  const { openAgent } = useShell();
+  const detail = useQuery({ queryKey: ['show-detail', id], queryFn: ({ signal }) => apiGet<ShowDetail>(`/api/shows/${id}`, signal) });
+  const shows = useQuery({ queryKey: ['shows'], queryFn: ({ signal }) => apiGet<ShowCard[]>('/api/shows', signal) });
+
+  const timelineOption = useMemo(() => {
+    const data = detail.data;
+    return {
+      animationDuration: 700,
+      color: ['#35d0ad', '#62a8ff'],
+      tooltip: { ...tooltip, trigger: 'axis' as const, formatter: (items: Array<{ seriesName: string; value: number; axisValue: string; marker: string }>) => {
+        const lines = items.map((item) => `${item.marker}${item.seriesName}：${item.seriesName.includes('票房') ? formatCurrency(item.value) : formatNumber(item.value)}`);
+        return `<strong>${items[0]?.axisValue || ''}</strong><br/>${lines.join('<br/>')}`;
+      } },
+      legend: { top: 0, right: 0, textStyle: { color: chartText }, itemWidth: 18, itemHeight: 3 },
+      grid: { top: 48, left: 52, right: 52, bottom: 28 },
+      xAxis: { type: 'category' as const, boundaryGap: true, data: data?.timeline.map((row) => shortDate(row.date)), axisLine: { lineStyle: { color: chartGrid } }, axisTick: { show: false }, axisLabel: { color: chartText, interval: 6 } },
+      yAxis: [
+        { type: 'value' as const, name: '累计票房', nameTextStyle: { color: chartText }, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => `${Math.round(value / 10000)}万` } },
+        { type: 'value' as const, name: '日声量', nameTextStyle: { color: chartText }, splitLine: { show: false }, axisLabel: { color: chartText } },
+      ],
+      series: [
+        { name: '累计票房', type: 'line' as const, smooth: .25, showSymbol: false, data: data?.timeline.map((row) => row.cumulativeRevenue), lineStyle: { width: 2.5 }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(53,208,173,.22)' }, { offset: 1, color: 'rgba(53,208,173,0)' }] } }, markLine: { silent: true, symbol: 'none', label: { color: '#f2a65a', formatter: '{b}', fontSize: 10 }, lineStyle: { color: 'rgba(242,166,90,.5)', type: 'dashed' as const }, data: data?.strategyEvents.map((event) => ({ name: event.type, xAxis: shortDate(event.startDate) })) } },
+        { name: '媒体声量', type: 'bar' as const, yAxisIndex: 1, barMaxWidth: 10, data: data?.timeline.map((row) => row.xiaohongshuNotes + row.douyinLikes / 100 + row.wechatPosts + row.externalComments), itemStyle: { color: 'rgba(98,168,255,.62)', borderRadius: [3, 3, 0, 0] } },
+      ],
+    };
+  }, [detail.data]);
+
+  const channelOption = useMemo(() => ({
+    grid: { top: 6, left: 58, right: 48, bottom: 20 },
+    tooltip: { ...tooltip, trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
+    xAxis: { type: 'value' as const, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => `${value / 10000}万` } },
+    yAxis: { type: 'category' as const, inverse: true, data: detail.data?.channelBreakdown.slice(0, 8).map((row) => row.channel), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#c4cede' } },
+    series: [{ type: 'bar' as const, barWidth: 10, data: detail.data?.channelBreakdown.slice(0, 8).map((row) => row.revenue), itemStyle: { color: '#35d0ad', borderRadius: [0, 4, 4, 0] }, label: { show: true, position: 'right' as const, color: chartText, formatter: (item: { value: number }) => formatCurrency(item.value, true) } }],
+  }), [detail.data]);
+
+  const audienceOption = useMemo(() => {
+    const audience = detail.data?.audience;
+    return {
+      color: ['#35d0ad', '#62a8ff', '#ae8bff'],
+      tooltip: { ...tooltip, trigger: 'item' as const, formatter: '{b}<br/>{c} 单 · {d}%' },
+      legend: { bottom: 0, textStyle: { color: chartText, fontSize: 11 }, itemWidth: 8, itemHeight: 8 },
+      series: [{ type: 'pie' as const, radius: ['50%', '72%'], center: ['50%', '42%'], padAngle: 3, label: { show: false }, data: [{ name: '青年', value: audience?.youth || 0 }, { name: '中年', value: audience?.middleAge || 0 }, { name: '老年', value: audience?.senior || 0 }] }],
+    };
+  }, [detail.data]);
+
+  if (detail.isLoading) return <div className="page"><LoadingState /></div>;
+  if (detail.error || !detail.data) return <div className="page"><ErrorState message={detail.error?.message || '未找到演出'} onRetry={() => detail.refetch()} /></div>;
+  const { show, period, audience } = detail.data;
+  const totalRevenue = show.revenue || 1;
+  const periodCards = [
+    ['开售首日', period.firstDay, '启动势能'], ['开售首周', period.firstWeek, '早期转化'],
+    ['常规销售', period.middle, '长尾贡献'], ['演前尾周', period.lastWeek, '压哨转化'],
+  ] as const;
+
+  return <div className="page show-detail-page">
+    <button className="back-link" onClick={() => navigate('/')}><ArrowLeft size={15} />返回总览</button>
+    <PageHeader eyebrow="单场项目复盘" title={show.project_name} description={`${dateTimeLabel(show.show_time)} · ${show.venue}`} onOpenAgent={openAgent} action={<label className="show-select"><span>切换演出</span><select value={id} onChange={(event) => navigate(`/shows/${event.target.value}`)}>{shows.data?.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><ChevronDown size={14} /></label>} />
+
+    <section className="show-hero">
+      <div className="show-identity"><span className="type-kicker">{show.performance_type}</span><h2>{show.project_name}</h2><div className="show-meta"><span><Building2 size={15} />{show.troupe_name}</span><span><Users size={15} />{show.director}{show.lead_actor ? ` · ${show.lead_actor}` : ''}</span><span><MapPin size={15} />{show.venue}</span><span><CalendarDays size={15} />{dateTimeLabel(show.show_time)}</span></div></div>
+      <div className="show-score"><Star size={16} fill="currentColor" /><strong>{show.douban_score}</strong><span>豆瓣评分</span></div>
+      <div className="hero-metric"><span>累计票房</span><strong>{formatCurrency(show.revenue, true)}</strong><small>{formatNumber(show.soldTickets)} 张票</small></div>
+      <div className="hero-metric"><span>当前上座率</span><strong className={show.occupancyRate < 60 ? 'danger-text' : ''}>{show.occupancyRate}%</strong><small>容量 {formatNumber(show.capacity)}</small></div>
+      <div className="hero-metric"><span>复购率</span><strong>{show.repeatRate}%</strong><small>按订单口径</small></div>
+    </section>
+
+    <Panel title="声量 → 票房时间线" eyebrow="宣发事件与销售曲线对齐" action={<span className="legend-note"><i className="green" />累计票房<i className="blue" />媒体声量<i className="orange" />策略节点</span>}>
+      <Chart option={timelineOption} height={390} ariaLabel={`${show.project_name}宣发声量和票房时间线`} />
+    </Panel>
+
+    <div className="detail-two-column">
+      <Panel title="渠道转化拆解" eyebrow="票房贡献 Top 8"><Chart option={channelOption} height={310} ariaLabel="单场演出渠道票房排名" /></Panel>
+      <Panel title="核心观众画像" eyebrow="订单年龄与新老客">
+        <Chart option={audienceOption} height={235} ariaLabel="单场演出观众年龄分布" />
+        <div className="audience-mini-grid"><div><span>新客</span><strong>{Math.round(audience.newOrders / (audience.newOrders + audience.repeatOrders) * 100)}%</strong></div><div><span>本市观众</span><strong>{Math.round(audience.localCity / (audience.localCity + audience.localProvince + audience.crossProvince) * 100)}%</strong></div><div><span>核心圈层</span><strong>{show.performance_type === '音乐剧' ? '剧迷' : show.performance_type === '舞剧' ? '舞蹈爱好者' : '大众受众'}</strong></div></div>
+      </Panel>
+    </div>
+
+    <div className="period-grid">{periodCards.map(([label, value, note]) => <article key={label}><span>{label}</span><strong>{formatCurrency(value, true)}</strong><div className="period-progress"><i style={{ width: `${Math.min(value / totalRevenue * 100, 100)}%` }} /></div><small>{note} · 占总票房 {Math.round(value / totalRevenue * 100)}%</small></article>)}</div>
+
+    <Panel title="策略 ROI 复盘" eyebrow="影响金额为运营人工记录" action={<span className="range-note"><WalletCards size={14} />{detail.data.strategyEvents.length} 项策略</span>}>
+      <div className="table-wrap"><table><thead><tr><th>策略</th><th>类型</th><th>执行周期</th><th>花费</th><th>影响金额</th><th>ROI</th><th>效果</th></tr></thead><tbody>{detail.data.strategyEvents.map((strategy) => <tr key={strategy.id}><td><strong>{strategy.type}</strong></td><td>{strategy.category}</td><td>{strategy.startDate.slice(5)} — {strategy.endDate.slice(5)}</td><td>{formatCurrency(strategy.cost)}</td><td>{formatCurrency(strategy.impactAmount)}</td><td><b className={(strategy.roi || 0) < 1 ? 'danger-text' : 'positive-text'}>{strategy.roi == null ? '—' : `${strategy.roi}×`}</b></td><td><span className={`status-badge ${strategy.effect === '未达预期' ? 'risk' : strategy.effect === '优秀' ? 'healthy' : 'attention'}`}>{strategy.effect}</span></td></tr>)}</tbody></table></div>
+    </Panel>
+  </div>;
+}

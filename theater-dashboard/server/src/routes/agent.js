@@ -1,0 +1,21 @@
+import { Router } from 'express';
+import { answerQuestion } from '../agent/query-agent.js';
+
+export function agentRouter(db) {
+  const router = Router();
+  router.post('/query', (req, res) => {
+    const data = answerQuestion(db, String(req.body?.question || ''), req.body || {});
+    res.json({ data });
+  });
+  router.get('/capabilities', (_req, res) => res.json({ data: {
+    mode: 'controlled-template',
+    questions: [
+      '最近30天票房最高的5场演出',
+      '最近30天小红书声量前3的演出，上座率怎么样',
+      '抖音渠道贡献最高的5场演出',
+      '复购率低于平均值的演出有哪些',
+      '哪类策略ROI最高',
+    ],
+  } }));
+  return router;
+}

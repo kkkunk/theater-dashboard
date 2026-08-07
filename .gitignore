@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+dist/
+.env
+*.db-shm
+*.db-wal
+coverage/
+*.tsbuildinfo
+theater-dashboard/audit/interaction-2026-08-07/01-overview.png

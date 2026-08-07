@@ -1,0 +1,56 @@
+export type Metric = { value: number; changePct: number | null; unit?: string };
+export type DateRange = { start: string; end: string; days: number };
+export type Summary = {
+  range: DateRange;
+  metrics: {
+    totalRevenue: Metric;
+    occupancyRate: Metric;
+    repeatPurchaseRate: Metric;
+    mediaVolume: Metric;
+  };
+};
+export type TrendRow = { date: string; revenue: number; tickets: number; orders: number; mediaVolume: number };
+export type Trends = { range: DateRange; platform: string; rows: TrendRow[] };
+export type ChannelRow = { channel: string; revenue: number; sharePct: number; orders?: number; showCount?: number; averageRevenuePerShow?: number };
+export type Channels = { range: DateRange; rows: ChannelRow[] };
+export type DistributionRow = { name: string; value: number; sharePct: number };
+export type Audience = {
+  range: DateRange;
+  age: DistributionRow[];
+  region: DistributionRow[];
+  segment: DistributionRow[];
+  loyalty: { newOrders: number; repeatOrders: number };
+};
+export type ShowCard = {
+  id: number; name: string; type: string; showTime: string; venue: string;
+  revenue: number; soldTickets: number; capacity: number; occupancyRate: number; mediaVolume: number;
+};
+export type Alert = { projectId: number; level: 'high' | 'medium'; type: string; message: string };
+export type StrategyEvent = {
+  id: number; startDate: string; endDate: string; category: string; type: string;
+  cost: number; impactAmount: number; roi: number | null; effect: string;
+};
+export type ShowDetail = {
+  show: Record<string, string | number | null> & {
+    id: number; project_name: string; troupe_name: string; director: string; lead_actor: string;
+    performance_type: string; show_time: string; venue: string; douban_score: number;
+    revenue: number; soldTickets: number; capacity: number; occupancyRate: number; repeatRate: number;
+  };
+  timeline: Array<{
+    date: string; revenue: number; cumulativeRevenue: number; tickets: number;
+    xiaohongshuNotes: number; douyinLikes: number; wechatPosts: number; externalComments: number;
+  }>;
+  strategyEvents: StrategyEvent[];
+  channelBreakdown: ChannelRow[];
+  audience: Record<string, number>;
+  period: { firstDay: number; firstWeek: number; middle: number; lastWeek: number; lastDay: number };
+};
+export type StrategyReview = {
+  rows: Array<{ strategyType: string; category: string; usageCount: number; showCount: number; totalCost: number; impactAmount: number; roi: number | null }>;
+  bestPractices: Array<{ projectId: number; showName: string; showType: string; strategyMix: string; totalCost: number; impactAmount: number; roi: number }>;
+};
+export type AgentResult = {
+  answer: string;
+  visualization: { type: string; rows: Array<Record<string, string | number | null>> };
+  meta: { intent: string; mode: string; range?: DateRange };
+};
