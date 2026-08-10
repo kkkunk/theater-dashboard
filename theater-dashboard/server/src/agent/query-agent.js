@@ -47,20 +47,43 @@ export function answerQuestion(db, question, query = {}) {
     return result(`抖音渠道贡献最高的是${rows[0]?.showName || '暂无数据'}。`, 'bar', rows, { intent: 'douyin_ranking', range });
   }
 
-  if (/复购率.*(低于|平均)/.test(text)) {
+  if (/(售票.*(完成率|进度).*(低于|不足))|(完成率.*(低于|不足))/.test(text)) {
+    const threshold = Math.min(Number(text.match(/(\d+(?:\.\d+)?)\s*%/)?.[1] || 80), 200);
     const rows = db.prepare(`
       WITH show_rates AS (
-        SELECT p.id projectId, p.project_name showName,
-          100.0 * SUM(o.repeat_purchase) / COUNT(*) repeatRate
+        SELECT p.id projectId, p.project_name showName, p.expected_ticket_count expectedTickets,
+          SUM(o.total_tickets) soldTickets,
+          100.0 * SUM(o.total_tickets) / NULLIF(p.expected_ticket_count, 0) completionRate
         FROM order_detail o JOIN project_ledger p ON p.id = o.project_id
-        WHERE o.order_date BETWEEN ? AND ? GROUP BY p.id
+        GROUP BY p.id
       )
-      SELECT projectId, showName, ROUND(repeatRate, 1) repeatRate,
-        ROUND((SELECT AVG(repeatRate) FROM show_rates), 1) averageRate
-      FROM show_rates WHERE repeatRate < (SELECT AVG(repeatRate) FROM show_rates)
-      ORDER BY repeatRate
-    `).all(range.start, range.end);
-    return result(`共有 ${rows.length} 场演出的复购率低于同期演出平均值。`, 'table', rows, { intent: 'below_average_repeat_rate', range });
+      SELECT projectId, showName, expectedTickets, soldTickets,
+        ROUND(completionRate, 1) completionRate
+      FROM show_rates WHERE completionRate < ? ORDER BY completionRate
+    `).all(threshold);
+    return result(`共有 ${rows.length} 场演出的售票完成率低于 ${threshold}%。`, 'table', rows, { intent: 'sales_completion_below_threshold', threshold });
+  }
+
+  if (/(总售票数|总宣传量|会员增长).*(分别|多少|汇总)|本月.*(售票|宣传|会员)/.test(text)) {
+    let aggregateRange = range;
+    if (/本月/.test(text)) {
+      const latest = db.prepare(`
+        SELECT MAX(day) FROM (
+          SELECT MAX(order_date) day FROM order_detail
+          UNION ALL SELECT MAX(metric_date) FROM media_daily
+          UNION ALL SELECT MAX(stat_date) FROM member_growth_daily
+        )
+      `).pluck().get();
+      aggregateRange = { start: `${latest.slice(0, 7)}-01`, end: latest };
+    }
+    const row = db.prepare(`
+      SELECT
+        (SELECT COALESCE(SUM(total_tickets), 0) FROM order_detail WHERE order_date BETWEEN ? AND ?) totalTickets,
+        (SELECT ROUND(COALESCE(SUM(xiaohongshu_notes + douyin_likes / 100.0 + wechat_posts + external_comments), 0), 0)
+          FROM media_daily WHERE metric_date BETWEEN ? AND ?) totalPublicity,
+        (SELECT COALESCE(SUM(new_members), 0) FROM member_growth_daily WHERE stat_date BETWEEN ? AND ?) memberGrowth
+    `).get(aggregateRange.start, aggregateRange.end, aggregateRange.start, aggregateRange.end, aggregateRange.start, aggregateRange.end);
+    return result(`${aggregateRange.start} 至 ${aggregateRange.end} 共售出 ${row.totalTickets} 张票，宣传量 ${row.totalPublicity}，新增会员 ${row.memberGrowth} 人。`, 'table', [row], { intent: 'operations_summary', range: aggregateRange });
   }
 
   if (/策略.*(ROI|回报|效果)/i.test(text)) {
@@ -73,7 +96,7 @@ export function answerQuestion(db, question, query = {}) {
     return result(`当前 ROI 最高的策略类型是${rows[0]?.strategyType || '暂无数据'}。`, 'bubble', rows, { intent: 'strategy_roi' });
   }
 
-  const error = new Error('当前 V1 仅支持票房排名、小红书声量与上座率、抖音渠道贡献、低于平均复购率和策略 ROI 查询。');
+  const error = new Error('当前 V1 仅支持票房排名、小红书声量与上座率、抖音渠道贡献、售票完成率、经营汇总和策略 ROI 查询。');
   error.status = 422;
   throw error;
 }

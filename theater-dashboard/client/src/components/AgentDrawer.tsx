@@ -25,17 +25,17 @@ export function AgentDrawer({ open, onClose }: { open: boolean; onClose: () => v
   const rows = mutation.data?.visualization.rows || [];
   return <>
     <button className={`drawer-backdrop ${open ? 'visible' : ''}`} onClick={onClose} aria-label="关闭智能问数" tabIndex={open ? 0 : -1} />
-    <aside className={`agent-drawer ${open ? 'open' : ''}`} aria-hidden={!open} aria-label="智能问数助手">
+    <aside className={`agent-drawer ${open ? 'open' : ''}`} aria-hidden={!open} aria-label="智能问数助手" role="dialog" aria-modal="true">
       <div className="agent-header">
         <div className="agent-avatar"><Sparkles size={18} /></div>
         <div><strong>演析助手</strong><span><i />受控问数模式</span></div>
         <button className="icon-button" onClick={onClose} aria-label="关闭"><X size={20} /></button>
       </div>
-      <div className="agent-body">
+      <div className="agent-body" aria-live="polite">
         {!mutation.data && !mutation.isPending && !mutation.error && <div className="agent-intro">
           <div className="agent-orb"><Bot size={26} /></div>
           <h2>想从数据里了解什么？</h2>
-          <p>我可以查询票房、媒体声量、渠道贡献、复购率和策略 ROI。</p>
+          <p>我可以查询票房、宣传量、渠道贡献、售票完成率、经营汇总和策略 ROI。</p>
           <div className="suggestions">{capabilities.data?.questions.map((item) => <button key={item} onClick={() => ask(item)}><MessageSquareText size={15} />{item}</button>)}</div>
         </div>}
         {mutation.isPending && <div className="agent-thinking"><span /><span /><span />正在分析口径并查询数据</div>}
@@ -44,8 +44,8 @@ export function AgentDrawer({ open, onClose }: { open: boolean; onClose: () => v
           <div className="user-message">{question}</div>
           <div className="assistant-message"><Sparkles size={15} /><p>{mutation.data.answer}</p></div>
           {rows.length > 0 && <div className="agent-table"><div className="agent-table-head">查询结果 <span>{rows.length} 条</span></div>{rows.map((row, index) => {
-            const label = String(row.showName || row.strategyType || `结果 ${index + 1}`);
-            const value = Number(row.revenue ?? row.douyinRevenue ?? row.roi ?? row.repeatRate ?? row.occupancyRate ?? 0);
+            const label = String(row.showName || row.strategyType || (row.totalTickets != null ? '经营汇总' : `结果 ${index + 1}`));
+            const value = Number(row.revenue ?? row.douyinRevenue ?? row.roi ?? row.completionRate ?? row.totalTickets ?? row.occupancyRate ?? 0);
             const currency = row.revenue != null || row.douyinRevenue != null;
             return <div className="agent-row" key={`${label}-${index}`}><span>{index + 1}</span><strong>{label}</strong><em>{currency ? formatCurrency(value, true) : value}</em></div>;
           })}</div>}

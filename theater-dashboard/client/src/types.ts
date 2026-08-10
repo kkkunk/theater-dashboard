@@ -5,7 +5,7 @@ export type Summary = {
   metrics: {
     totalRevenue: Metric;
     occupancyRate: Metric;
-    repeatPurchaseRate: Metric;
+    salesCompletionRate: Metric;
     mediaVolume: Metric;
   };
 };
@@ -13,17 +13,18 @@ export type TrendRow = { date: string; revenue: number; tickets: number; orders:
 export type Trends = { range: DateRange; platform: string; rows: TrendRow[] };
 export type ChannelRow = { channel: string; revenue: number; sharePct: number; orders?: number; showCount?: number; averageRevenuePerShow?: number };
 export type Channels = { range: DateRange; rows: ChannelRow[] };
-export type DistributionRow = { name: string; value: number; sharePct: number };
-export type Audience = {
+export type Operations = {
   range: DateRange;
-  age: DistributionRow[];
-  region: DistributionRow[];
-  segment: DistributionRow[];
-  loyalty: { newOrders: number; repeatOrders: number };
+  grain: 'day' | 'week' | 'month';
+  rows: Array<{
+    periodStart: string; periodEnd: string; totalTickets: number; totalRevenue: number;
+    totalPublicity: number; memberGrowth: number; mediaFollowerGrowth: number;
+  }>;
 };
 export type ShowCard = {
   id: number; name: string; type: string; showTime: string; venue: string;
   revenue: number; soldTickets: number; capacity: number; occupancyRate: number; mediaVolume: number;
+  expectedTickets: number; salesCompletionRate: number;
 };
 export type Alert = { projectId: number; level: 'high' | 'medium'; type: string; message: string };
 export type StrategyEvent = {
@@ -34,7 +35,8 @@ export type ShowDetail = {
   show: Record<string, string | number | null> & {
     id: number; project_name: string; troupe_name: string; director: string; lead_actor: string;
     performance_type: string; show_time: string; venue: string; douban_score: number;
-    revenue: number; soldTickets: number; capacity: number; occupancyRate: number; repeatRate: number;
+    revenue: number; soldTickets: number; capacity: number; occupancyRate: number;
+    expectedTickets: number; remainingGoal: number; salesCompletionRate: number;
   };
   timeline: Array<{
     date: string; revenue: number; cumulativeRevenue: number; tickets: number;
@@ -42,7 +44,6 @@ export type ShowDetail = {
   }>;
   strategyEvents: StrategyEvent[];
   channelBreakdown: ChannelRow[];
-  audience: Record<string, number>;
   period: { firstDay: number; firstWeek: number; middle: number; lastWeek: number; lastDay: number };
 };
 export type StrategyReview = {

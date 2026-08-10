@@ -12,7 +12,7 @@ import type { Channels, StrategyReview } from '../types';
 import { formatCurrency, formatNumber } from '../utils/format';
 
 const showTypes = ['', '音乐剧', '戏剧', '舞剧', '儿童剧', '音乐会', '戏曲', '综艺'];
-const strategyColors: Record<string, string> = { 新媒体投放: '#62a8ff', 票务促销: '#35d0ad', 社群运营: '#ae8bff' };
+const strategyColors: Record<string, string> = { 新媒体投放: '#94a58b', 票务促销: '#183525', 社群运营: '#b9d9b8' };
 
 export function ReviewsPage() {
   const { openAgent } = useShell();
@@ -26,17 +26,17 @@ export function ReviewsPage() {
     grid: { top: 12, left: 56, right: 56, bottom: 22 },
     tooltip: { ...tooltip, trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
     xAxis: { type: 'value' as const, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => `${value / 10000}万` } },
-    yAxis: { type: 'category' as const, inverse: true, data: channels.data?.rows.map((row) => row.channel), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#c4cede' } },
-    series: [{ type: 'bar' as const, barWidth: 12, data: channels.data?.rows.map((row, index) => ({ value: row.revenue, itemStyle: { color: index < 3 ? '#35d0ad' : 'rgba(98,168,255,.62)', borderRadius: [0, 4, 4, 0] } })), label: { show: true, position: 'right' as const, color: chartText, formatter: (item: { value: number }) => formatCurrency(item.value, true) } }],
+    yAxis: { type: 'category' as const, inverse: true, data: channels.data?.rows.map((row) => row.channel), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#526353' } },
+    series: [{ type: 'bar' as const, barWidth: 12, data: channels.data?.rows.map((row, index) => ({ value: row.revenue, itemStyle: { color: index < 3 ? '#183525' : '#B9D9B8', borderColor: '#183525', borderWidth: 1, borderRadius: [0, 8, 8, 0] } })), label: { show: true, position: 'right' as const, color: chartText, formatter: (item: { value: number }) => formatCurrency(item.value, true) } }],
   }), [channels.data]);
 
   const strategyOption = useMemo(() => ({
-    color: ['#62a8ff', '#35d0ad', '#ae8bff'],
+    color: ['#94a58b', '#183525', '#b9d9b8'],
     tooltip: { ...tooltip, formatter: (item: { data: { name: string; value: number[]; category: string } }) => `<strong>${item.data.name}</strong><br/>投入：${formatCurrency(item.data.value[0])}<br/>影响金额：${formatCurrency(item.data.value[1])}<br/>使用 ${item.data.value[2]} 次` },
     grid: { top: 20, left: 56, right: 28, bottom: 46 },
     xAxis: { type: 'value' as const, name: '累计投入', nameLocation: 'middle' as const, nameGap: 30, nameTextStyle: { color: chartText }, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => `${value / 10000}万` } },
     yAxis: { type: 'value' as const, name: '影响金额', nameTextStyle: { color: chartText }, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => `${value / 10000}万` } },
-    series: [{ type: 'scatter' as const, symbolSize: (value: number[]) => 18 + value[2] * 3, data: strategies.data?.rows.map((row) => ({ name: row.strategyType, category: row.category, value: [row.totalCost, row.impactAmount, row.usageCount], itemStyle: { color: strategyColors[row.category] || '#62a8ff' }, label: { show: row.usageCount >= 8, formatter: row.strategyType, position: 'top' as const, color: '#b9c5d8', fontSize: 10 } })) }],
+    series: [{ type: 'scatter' as const, symbolSize: (value: number[]) => 18 + value[2] * 3, data: strategies.data?.rows.map((row) => ({ name: row.strategyType, category: row.category, value: [row.totalCost, row.impactAmount, row.usageCount], itemStyle: { color: strategyColors[row.category] || '#94a58b', borderColor: '#183525', borderWidth: 1 }, label: { show: row.usageCount >= 8, formatter: row.strategyType, position: 'top' as const, color: '#526353', fontSize: 10 } })) }],
   }), [strategies.data]);
 
   const totalChannelRevenue = channels.data?.rows.reduce((sum, row) => sum + row.revenue, 0) || 0;
@@ -56,7 +56,7 @@ export function ReviewsPage() {
       <Panel title="渠道效率排行榜" eyebrow="累计票房贡献">
         {channels.isLoading ? <LoadingState /> : channels.error ? <ErrorState message={channels.error.message} onRetry={() => channels.refetch()} /> : <Chart option={channelOption} height={390} ariaLabel="渠道效率排行榜" />}
       </Panel>
-      <Panel title="策略投入与影响" eyebrow="气泡大小代表使用次数" action={<div className="chart-legend"><span><i style={{ background: '#62a8ff' }} />新媒体</span><span><i style={{ background: '#35d0ad' }} />票务</span><span><i style={{ background: '#ae8bff' }} />社群</span></div>}>
+      <Panel title="策略投入与影响" eyebrow="气泡大小代表使用次数" action={<div className="chart-legend"><span><i style={{ background: '#94a58b' }} />新媒体</span><span><i style={{ background: '#183525' }} />票务</span><span><i style={{ background: '#b9d9b8' }} />社群</span></div>}>
         {strategies.isLoading ? <LoadingState /> : strategies.error ? <ErrorState message={strategies.error.message} onRetry={() => strategies.refetch()} /> : <Chart option={strategyOption} height={390} ariaLabel="策略投入影响金额气泡图" />}
       </Panel>
     </div>

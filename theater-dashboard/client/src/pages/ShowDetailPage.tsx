@@ -22,7 +22,7 @@ export function ShowDetailPage() {
     const data = detail.data;
     return {
       animationDuration: 700,
-      color: ['#35d0ad', '#62a8ff'],
+      color: ['#183525', '#94a58b'],
       tooltip: { ...tooltip, trigger: 'axis' as const, formatter: (items: Array<{ seriesName: string; value: number; axisValue: string; marker: string }>) => {
         const lines = items.map((item) => `${item.marker}${item.seriesName}：${item.seriesName.includes('票房') ? formatCurrency(item.value) : formatNumber(item.value)}`);
         return `<strong>${items[0]?.axisValue || ''}</strong><br/>${lines.join('<br/>')}`;
@@ -35,8 +35,8 @@ export function ShowDetailPage() {
         { type: 'value' as const, name: '日声量', nameTextStyle: { color: chartText }, splitLine: { show: false }, axisLabel: { color: chartText } },
       ],
       series: [
-        { name: '累计票房', type: 'line' as const, smooth: .25, showSymbol: false, data: data?.timeline.map((row) => row.cumulativeRevenue), lineStyle: { width: 2.5 }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(53,208,173,.22)' }, { offset: 1, color: 'rgba(53,208,173,0)' }] } }, markLine: { silent: true, symbol: 'none', label: { color: '#f2a65a', formatter: '{b}', fontSize: 10 }, lineStyle: { color: 'rgba(242,166,90,.5)', type: 'dashed' as const }, data: data?.strategyEvents.map((event) => ({ name: event.type, xAxis: shortDate(event.startDate) })) } },
-        { name: '媒体声量', type: 'bar' as const, yAxisIndex: 1, barMaxWidth: 10, data: data?.timeline.map((row) => row.xiaohongshuNotes + row.douyinLikes / 100 + row.wechatPosts + row.externalComments), itemStyle: { color: 'rgba(98,168,255,.62)', borderRadius: [3, 3, 0, 0] } },
+        { name: '累计票房', type: 'line' as const, smooth: .25, showSymbol: false, data: data?.timeline.map((row) => row.cumulativeRevenue), lineStyle: { width: 3 }, areaStyle: { color: 'rgba(148,165,139,.13)' }, markLine: { silent: true, symbol: 'none', label: { color: '#7b6a3f', formatter: '{b}', fontSize: 10 }, lineStyle: { color: 'rgba(123,106,63,.55)', type: 'dashed' as const }, data: data?.strategyEvents.map((event) => ({ name: event.type, xAxis: shortDate(event.startDate) })) } },
+        { name: '媒体声量', type: 'bar' as const, yAxisIndex: 1, barMaxWidth: 11, data: data?.timeline.map((row) => row.xiaohongshuNotes + row.douyinLikes / 100 + row.wechatPosts + row.externalComments), itemStyle: { color: '#B9D9B8', borderColor: '#183525', borderWidth: 1, borderRadius: [7, 7, 0, 0] } },
       ],
     };
   }, [detail.data]);
@@ -45,23 +45,13 @@ export function ShowDetailPage() {
     grid: { top: 6, left: 58, right: 48, bottom: 20 },
     tooltip: { ...tooltip, trigger: 'axis' as const, axisPointer: { type: 'shadow' as const } },
     xAxis: { type: 'value' as const, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => `${value / 10000}万` } },
-    yAxis: { type: 'category' as const, inverse: true, data: detail.data?.channelBreakdown.slice(0, 8).map((row) => row.channel), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#c4cede' } },
-    series: [{ type: 'bar' as const, barWidth: 10, data: detail.data?.channelBreakdown.slice(0, 8).map((row) => row.revenue), itemStyle: { color: '#35d0ad', borderRadius: [0, 4, 4, 0] }, label: { show: true, position: 'right' as const, color: chartText, formatter: (item: { value: number }) => formatCurrency(item.value, true) } }],
+    yAxis: { type: 'category' as const, inverse: true, data: detail.data?.channelBreakdown.slice(0, 8).map((row) => row.channel), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#526353' } },
+    series: [{ type: 'bar' as const, barWidth: 11, data: detail.data?.channelBreakdown.slice(0, 8).map((row) => row.revenue), itemStyle: { color: '#94A58B', borderColor: '#183525', borderWidth: 1, borderRadius: [0, 8, 8, 0] }, label: { show: true, position: 'right' as const, color: chartText, formatter: (item: { value: number }) => formatCurrency(item.value, true) } }],
   }), [detail.data]);
-
-  const audienceOption = useMemo(() => {
-    const audience = detail.data?.audience;
-    return {
-      color: ['#35d0ad', '#62a8ff', '#ae8bff'],
-      tooltip: { ...tooltip, trigger: 'item' as const, formatter: '{b}<br/>{c} 单 · {d}%' },
-      legend: { bottom: 0, textStyle: { color: chartText, fontSize: 11 }, itemWidth: 8, itemHeight: 8 },
-      series: [{ type: 'pie' as const, radius: ['50%', '72%'], center: ['50%', '42%'], padAngle: 3, label: { show: false }, data: [{ name: '青年', value: audience?.youth || 0 }, { name: '中年', value: audience?.middleAge || 0 }, { name: '老年', value: audience?.senior || 0 }] }],
-    };
-  }, [detail.data]);
 
   if (detail.isLoading) return <div className="page"><LoadingState /></div>;
   if (detail.error || !detail.data) return <div className="page"><ErrorState message={detail.error?.message || '未找到演出'} onRetry={() => detail.refetch()} /></div>;
-  const { show, period, audience } = detail.data;
+  const { show, period } = detail.data;
   const totalRevenue = show.revenue || 1;
   const periodCards = [
     ['开售首日', period.firstDay, '启动势能'], ['开售首周', period.firstWeek, '早期转化'],
@@ -77,7 +67,7 @@ export function ShowDetailPage() {
       <div className="show-score"><Star size={16} fill="currentColor" /><strong>{show.douban_score}</strong><span>豆瓣评分</span></div>
       <div className="hero-metric"><span>累计票房</span><strong>{formatCurrency(show.revenue, true)}</strong><small>{formatNumber(show.soldTickets)} 张票</small></div>
       <div className="hero-metric"><span>当前上座率</span><strong className={show.occupancyRate < 60 ? 'danger-text' : ''}>{show.occupancyRate}%</strong><small>容量 {formatNumber(show.capacity)}</small></div>
-      <div className="hero-metric"><span>复购率</span><strong>{show.repeatRate}%</strong><small>按订单口径</small></div>
+      <div className="hero-metric"><span>售票完成率</span><strong className={show.salesCompletionRate < 60 ? 'danger-text' : ''}>{show.salesCompletionRate}%</strong><small>目标 {formatNumber(show.expectedTickets)} 张</small></div>
     </section>
 
     <Panel title="声量 → 票房时间线" eyebrow="宣发事件与销售曲线对齐" action={<span className="legend-note"><i className="green" />累计票房<i className="blue" />媒体声量<i className="orange" />策略节点</span>}>
@@ -86,9 +76,11 @@ export function ShowDetailPage() {
 
     <div className="detail-two-column">
       <Panel title="渠道转化拆解" eyebrow="票房贡献 Top 8"><Chart option={channelOption} height={310} ariaLabel="单场演出渠道票房排名" /></Panel>
-      <Panel title="核心观众画像" eyebrow="订单年龄与新老客">
-        <Chart option={audienceOption} height={235} ariaLabel="单场演出观众年龄分布" />
-        <div className="audience-mini-grid"><div><span>新客</span><strong>{Math.round(audience.newOrders / (audience.newOrders + audience.repeatOrders) * 100)}%</strong></div><div><span>本市观众</span><strong>{Math.round(audience.localCity / (audience.localCity + audience.localProvince + audience.crossProvince) * 100)}%</strong></div><div><span>核心圈层</span><strong>{show.performance_type === '音乐剧' ? '剧迷' : show.performance_type === '舞剧' ? '舞蹈爱好者' : '大众受众'}</strong></div></div>
+      <Panel title="售票目标完成进度" eyebrow="实际售票 / 预计售票">
+        <div className="sales-goal" aria-label={`售票完成率 ${show.salesCompletionRate}%`}>
+          <div className="goal-orbit" style={{ background: `conic-gradient(#183525 ${Math.min(show.salesCompletionRate, 100) * 3.6}deg, #dce2d7 0deg)` }}><div><strong>{show.salesCompletionRate}%</strong><span>{show.salesCompletionRate > 100 ? `超额 ${Math.round(show.salesCompletionRate - 100)}%` : '当前完成率'}</span></div></div>
+          <div className="goal-ledger"><div><span>预计售票</span><strong>{formatNumber(show.expectedTickets)}<small>张</small></strong></div><div><span>实际售票</span><strong>{formatNumber(show.soldTickets)}<small>张</small></strong></div><div><span>{show.salesCompletionRate > 100 ? '超额售票' : '剩余目标'}</span><strong>{formatNumber(show.salesCompletionRate > 100 ? show.soldTickets - show.expectedTickets : show.remainingGoal)}<small>张</small></strong></div></div>
+        </div>
       </Panel>
     </div>
 

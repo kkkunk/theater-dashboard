@@ -1,6 +1,6 @@
 import { initDb, getDb } from './schema.js';
 
-const REPORT_DATE = '2026-08-07';
+const REPORT_DATE = '2026-08-08';
 const DAY = 86_400_000;
 
 function rngFactory(seed = 20260807) {
@@ -71,6 +71,7 @@ const db = initDb(getDb());
 db.exec(`
   DELETE FROM media_daily;
   DELETE FROM external_info;
+  DELETE FROM member_growth_daily;
   DELETE FROM order_detail;
   DELETE FROM audience;
   DELETE FROM promotion_strategy;
@@ -85,15 +86,15 @@ const insertShow = db.prepare(`
     performance_subtype, ip_type, environment_type, subject_type, theme_type,
     style_type, mood_type, theater_name, venue, show_name, performance_type,
     show_time, promotion_start_date, ip_score, director_douban_avg,
-    troupe_douban_avg, douban_score, douban_raters, predicted_retail_revenue,
+    troupe_douban_avg, douban_score, douban_raters, expected_ticket_count, predicted_retail_revenue,
     forecast_retail_revenue
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const insertMedia = db.prepare(`
   INSERT INTO media_daily
-  (project_id, metric_date, xiaohongshu_notes, douyin_likes, wechat_posts, external_comments)
-  VALUES (?, ?, ?, ?, ?, ?)
+  (project_id, metric_date, xiaohongshu_notes, douyin_likes, wechat_posts, external_comments, follower_growth)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
 const insertPrice = db.prepare(`
   INSERT INTO ticket_price
@@ -147,7 +148,7 @@ db.transaction(() => {
       show.ip, show.venue, show.subject, show.theme, show.style, show.mood,
       '杭州临平大剧院', show.venue, show.name, show.type, show.time,
       promotionStart, show.score + .2, show.score - .2, show.score - .3,
-      show.score, show.raters, show.pred, show.forecast,
+      show.score, show.raters, Math.round(show.capacity * .9), show.pred, show.forecast,
     );
     const projectId = Number(result.lastInsertRowid);
     const lastMetricDate = showDate < REPORT_DATE ? showDate : REPORT_DATE;
@@ -161,7 +162,8 @@ db.transaction(() => {
       const douyin = Math.max(0, Math.round((450 + rng() * 1300) * show.media * launchPulse * campaignPulse));
       const wechat = (offset % 9 === 0 || offset === 24) ? randomInt(1, 2) : 0;
       const comments = Math.round((8 + rng() * 45) * show.media * campaignPulse);
-      insertMedia.run(projectId, date, xhs, douyin, wechat, comments);
+      const followerGrowth = Math.max(0, Math.round(1 + xhs * .35 + douyin / 900 + comments * .08 + wechat * 2));
+      insertMedia.run(projectId, date, xhs, douyin, wechat, comments, followerGrowth);
       mediaByDate.set(date, xhs + douyin / 250 + wechat * 8 + comments / 5);
     }
 
@@ -271,6 +273,25 @@ db.transaction(() => {
   });
 })();
 
+const insertMemberGrowth = db.prepare(`
+  INSERT INTO member_growth_daily (stat_date, new_members) VALUES (?, ?)
+`);
+const dailyNewOrders = db.prepare('SELECT COALESCE(SUM(first_purchase), 0) FROM order_detail WHERE order_date = ?').pluck();
+const dailyPublicity = db.prepare(`
+  SELECT COALESCE(SUM(xiaohongshu_notes + douyin_likes / 100.0 + wechat_posts + external_comments), 0)
+  FROM media_daily WHERE metric_date = ?
+`).pluck();
+
+db.transaction(() => {
+  const startDate = addDays(REPORT_DATE, -89);
+  for (let date = startDate; date <= REPORT_DATE; date = addDays(date, 1)) {
+    const newOrders = dailyNewOrders.get(date);
+    const publicity = dailyPublicity.get(date);
+    const baseline = 3 + dayDiff(startDate, date) % 5;
+    insertMemberGrowth.run(date, Math.max(0, Math.round(baseline + newOrders * .45 + publicity * .015)));
+  }
+})();
+
 const updateShow = db.prepare(`
   UPDATE project_ledger SET
     wechat_promo_count = (SELECT SUM(wechat_posts) FROM media_daily WHERE project_id = ?),
@@ -302,7 +323,8 @@ const counts = db.prepare(`
     (SELECT COUNT(*) FROM audience) AS audiences,
     (SELECT COUNT(*) FROM order_detail) AS orders,
     (SELECT SUM(total_tickets) FROM order_detail) AS tickets,
-    (SELECT COUNT(*) FROM media_daily) AS media_days
+    (SELECT COUNT(*) FROM media_daily) AS media_days,
+    (SELECT COUNT(*) FROM member_growth_daily) AS member_days
 `).get();
 
-console.log(`Seed complete: ${counts.shows} shows, ${counts.audiences} audiences, ${counts.orders} orders, ${counts.tickets} tickets, ${counts.media_days} media-day rows.`);
+console.log(`Seed complete: ${counts.shows} shows, ${counts.audiences} audiences, ${counts.orders} orders, ${counts.tickets} tickets, ${counts.media_days} media-day rows, ${counts.member_days} member-day rows.`);

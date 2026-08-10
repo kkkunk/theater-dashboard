@@ -59,6 +59,7 @@ export function initDb(database = getDb()) {
       troupe_douban_avg REAL,
       douban_score REAL,
       douban_raters INTEGER,
+      expected_ticket_count INTEGER DEFAULT 0,
       predicted_retail_revenue REAL,
       forecast_retail_revenue REAL,
       first_day_revenue REAL DEFAULT 0,
@@ -164,6 +165,7 @@ export function initDb(database = getDb()) {
       douyin_likes INTEGER DEFAULT 0,
       wechat_posts INTEGER DEFAULT 0,
       external_comments INTEGER DEFAULT 0,
+      follower_growth INTEGER DEFAULT 0,
       UNIQUE(project_id, metric_date),
       FOREIGN KEY (project_id) REFERENCES project_ledger(id) ON DELETE CASCADE
     );
@@ -180,10 +182,18 @@ export function initDb(database = getDb()) {
       FOREIGN KEY (project_id) REFERENCES project_ledger(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS member_growth_daily (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      stat_date TEXT NOT NULL UNIQUE,
+      new_members INTEGER NOT NULL DEFAULT 0
+    );
+
   `);
 
   // Non-destructive migrations for databases created by v0.1.
   ensureColumn(database, 'project_ledger', 'promotion_start_date TEXT');
+  ensureColumn(database, 'project_ledger', 'expected_ticket_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'media_daily', 'follower_growth INTEGER DEFAULT 0');
   ensureColumn(database, 'order_detail', 'order_date TEXT');
   ensureColumn(database, 'order_detail', 'tier_level TEXT');
 
@@ -193,6 +203,7 @@ export function initDb(database = getDb()) {
     CREATE INDEX IF NOT EXISTS idx_order_phone ON order_detail(phone);
     CREATE INDEX IF NOT EXISTS idx_media_project_date ON media_daily(project_id, metric_date);
     CREATE INDEX IF NOT EXISTS idx_strategy_project ON promotion_strategy(project_id);
+    CREATE INDEX IF NOT EXISTS idx_member_growth_date ON member_growth_daily(stat_date);
   `);
 
   return database;

@@ -5,8 +5,8 @@ export function Chart({ option, height = 300, ariaLabel }: { option: unknown; he
   return <div role="img" aria-label={ariaLabel}><ReactECharts option={option as EChartsOption} notMerge lazyUpdate style={{ height }} opts={{ renderer: 'canvas' }} /></div>;
 }
 
-export const chartText = '#7f8da8';
-export const chartGrid = 'rgba(127, 141, 168, .12)';
+export const chartText = '#718071';
+export const chartGrid = 'rgba(24, 53, 37, .11)';
 export const tooltip = {
-  backgroundColor: '#182235', borderColor: '#2a3850', textStyle: { color: '#e8eef9', fontSize: 12 },
+  backgroundColor: '#183525', borderColor: '#183525', borderWidth: 1, textStyle: { color: '#f5f6f1', fontSize: 12 }, extraCssText: 'border-radius: 12px; box-shadow: 0 12px 28px rgba(24,53,37,.18);',
 };

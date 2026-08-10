@@ -6,7 +6,7 @@ import type { Metric } from '../types';
 export function MetricCard({ label, valueLabel, metric, spark, accent, delay = 0 }: { label: string; valueLabel: string; metric: Metric; spark: number[]; accent: string; delay?: number }) {
   const direction = metric.changePct == null ? 'flat' : metric.changePct > 0 ? 'up' : metric.changePct < 0 ? 'down' : 'flat';
   const Icon = direction === 'up' ? ArrowUpRight : direction === 'down' ? ArrowDownRight : Minus;
-  const good = label === '上座率' || label === '总票房' || label === '复购率' || label === '媒体声量';
+  const good = label === '上座率' || label === '总票房' || label === '售票完成率' || label === '总宣传量';
   const changeClass = direction === 'flat' ? 'neutral' : (direction === 'up') === good ? 'positive' : 'negative';
   const option = {
     animation: true, grid: { left: 0, right: 0, top: 4, bottom: 0 },

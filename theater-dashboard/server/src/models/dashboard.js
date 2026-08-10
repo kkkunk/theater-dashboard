@@ -7,13 +7,16 @@ function periodMetrics(db, start, end) {
     ), capacity AS (
       SELECT COALESCE(SUM(issued_count), 0) value FROM ticket_price
       WHERE project_id IN (SELECT project_id FROM active_projects)
+    ), target AS (
+      SELECT COALESCE(SUM(expected_ticket_count), 0) value FROM project_ledger
+      WHERE id IN (SELECT project_id FROM active_projects)
     )
     SELECT
       COALESCE(SUM(o.total_face_amount), 0) AS revenue,
       COALESCE(SUM(o.total_tickets), 0) AS sold_tickets,
       COUNT(o.id) AS orders,
-      COALESCE(SUM(o.repeat_purchase), 0) AS repeat_orders,
-      (SELECT value FROM capacity) AS capacity
+      (SELECT value FROM capacity) AS capacity,
+      (SELECT value FROM target) AS expected_tickets
     FROM order_detail o
     WHERE o.order_date BETWEEN ? AND ?
   `).get(start, end, start, end);
@@ -31,28 +34,72 @@ export function getSummary(db, query) {
   const previousStart = db.prepare('SELECT date(?, ?)').pluck().get(previousEnd, `-${duration - 1} days`);
   const current = periodMetrics(db, range.start, range.end);
   const previous = periodMetrics(db, previousStart, previousEnd);
-  const media = db.prepare(`
+  const publicity = db.prepare(`
     SELECT COALESCE(SUM(xiaohongshu_notes + wechat_posts + external_comments) + SUM(douyin_likes) / 100.0, 0) AS volume
     FROM media_daily WHERE metric_date BETWEEN ? AND ?
   `).pluck().get(range.start, range.end);
-  const previousMedia = db.prepare(`
+  const previousPublicity = db.prepare(`
     SELECT COALESCE(SUM(xiaohongshu_notes + wechat_posts + external_comments) + SUM(douyin_likes) / 100.0, 0)
     FROM media_daily WHERE metric_date BETWEEN ? AND ?
   `).pluck().get(previousStart, previousEnd);
 
-  const repeatRate = current.orders ? current.repeat_orders / current.orders * 100 : 0;
-  const previousRepeatRate = previous.orders ? previous.repeat_orders / previous.orders * 100 : 0;
   const occupancy = current.capacity ? current.sold_tickets / current.capacity * 100 : 0;
   const previousOccupancy = previous.capacity ? previous.sold_tickets / previous.capacity * 100 : 0;
+  const completion = current.expected_tickets ? current.sold_tickets / current.expected_tickets * 100 : 0;
+  const previousCompletion = previous.expected_tickets ? previous.sold_tickets / previous.expected_tickets * 100 : 0;
   return {
     range,
     metrics: {
       totalRevenue: { value: round(current.revenue, 0), changePct: change(current.revenue, previous.revenue) },
       occupancyRate: { value: round(occupancy, 1), changePct: round(occupancy - previousOccupancy, 1), unit: 'percentage_point' },
-      repeatPurchaseRate: { value: round(repeatRate, 1), changePct: round(repeatRate - previousRepeatRate, 1), unit: 'percentage_point' },
-      mediaVolume: { value: round(media, 0), changePct: change(media, previousMedia) },
+      salesCompletionRate: { value: round(completion, 1), changePct: round(completion - previousCompletion, 1), unit: 'percentage_point' },
+      mediaVolume: { value: round(publicity, 0), changePct: change(publicity, previousPublicity) },
     },
   };
+}
+
+export function getOperations(db, query) {
+  const range = resolveDateRange(db, query);
+  const grain = ['day', 'week', 'month'].includes(query.grain) ? query.grain : 'day';
+  const groupExpression = {
+    day: 'dates.day',
+    week: "date(dates.day, '-' || ((CAST(strftime('%w', dates.day) AS INTEGER) + 6) % 7) || ' days')",
+    month: "substr(dates.day, 1, 7) || '-01'",
+  }[grain];
+  const rows = db.prepare(`
+    WITH RECURSIVE dates(day) AS (
+      SELECT ? UNION ALL SELECT date(day, '+1 day') FROM dates WHERE day < ?
+    ), sales AS (
+      SELECT order_date day, SUM(total_tickets) tickets, SUM(total_face_amount) revenue
+      FROM order_detail WHERE order_date BETWEEN ? AND ? GROUP BY order_date
+    ), publicity AS (
+      SELECT metric_date day,
+        SUM(xiaohongshu_notes + douyin_likes / 100.0 + wechat_posts + external_comments) volume,
+        SUM(follower_growth) follower_growth
+      FROM media_daily WHERE metric_date BETWEEN ? AND ? GROUP BY metric_date
+    ), members AS (
+      SELECT stat_date day, SUM(new_members) new_members
+      FROM member_growth_daily WHERE stat_date BETWEEN ? AND ? GROUP BY stat_date
+    ), daily AS (
+      SELECT dates.day, COALESCE(sales.tickets, 0) tickets, COALESCE(sales.revenue, 0) revenue,
+        COALESCE(publicity.volume, 0) publicity,
+        COALESCE(publicity.follower_growth, 0) follower_growth,
+        COALESCE(members.new_members, 0) members
+      FROM dates
+      LEFT JOIN sales ON sales.day = dates.day
+      LEFT JOIN publicity ON publicity.day = dates.day
+      LEFT JOIN members ON members.day = dates.day
+    )
+    SELECT ${groupExpression} periodStart, MAX(dates.day) periodEnd,
+      SUM(daily.tickets) totalTickets,
+      ROUND(SUM(daily.revenue), 0) totalRevenue,
+      ROUND(SUM(daily.publicity), 0) totalPublicity,
+      SUM(daily.members) memberGrowth,
+      SUM(daily.follower_growth) mediaFollowerGrowth
+    FROM dates JOIN daily ON daily.day = dates.day
+    GROUP BY periodStart ORDER BY periodStart DESC
+  `).all(range.start, range.end, range.start, range.end, range.start, range.end, range.start, range.end);
+  return { range, grain, rows };
 }
 
 export function getTrends(db, query) {
@@ -90,33 +137,14 @@ export function getChannels(db, query) {
   return { range, rows: rows.map((row) => ({ ...row, revenue: round(row.revenue, 0), sharePct: round(row.revenue / total * 100, 1) })) };
 }
 
-export function getAudience(db, query) {
-  const range = resolveDateRange(db, query);
-  const baseParams = [range.start, range.end];
-  const dimensions = {
-    age: [['青年', 'youth_orders'], ['中年', 'middle_age_orders'], ['老年', 'senior_orders']],
-    region: [['本市', 'local_city_orders'], ['本省', 'local_province_orders'], ['跨省', '1 - local_city_orders - local_province_orders']],
-    segment: [['剧迷', 'musical_fan'], ['话剧爱好者', 'drama_fan'], ['舞蹈爱好者', 'dance_fan'], ['亲子家庭', 'children_fan'], ['古典乐迷', 'concert_fan'], ['其他受众', '1 - musical_fan - drama_fan - dance_fan - children_fan - concert_fan']],
-  };
-  const result = {};
-  for (const [key, entries] of Object.entries(dimensions)) {
-    const rows = entries.map(([name, expression]) => ({
-      name,
-      value: db.prepare(`SELECT COALESCE(SUM(${expression}), 0) FROM order_detail WHERE order_date BETWEEN ? AND ?`).pluck().get(...baseParams),
-    }));
-    const total = rows.reduce((sum, row) => sum + row.value, 0);
-    result[key] = rows.map((row) => ({ ...row, sharePct: total ? round(row.value / total * 100, 1) : 0 }));
-  }
-  const loyalty = db.prepare(`SELECT SUM(first_purchase) newOrders, SUM(repeat_purchase) repeatOrders FROM order_detail WHERE order_date BETWEEN ? AND ?`).get(...baseParams);
-  return { range, ...result, loyalty };
-}
-
 export function getShowCards(db) {
   return db.prepare(`
     SELECT p.id, p.project_name name, p.performance_type type, p.show_time showTime,
       p.venue, ROUND(SUM(o.total_face_amount), 0) revenue,
       SUM(o.total_tickets) soldTickets, SUM(t.issued_count) capacity,
       ROUND(100.0 * SUM(o.total_tickets) / SUM(t.issued_count), 1) occupancyRate,
+      p.expected_ticket_count expectedTickets,
+      ROUND(100.0 * SUM(o.total_tickets) / NULLIF(p.expected_ticket_count, 0), 1) salesCompletionRate,
       p.xiaohongshu_notes + p.douyin_likes / 100.0 + p.wechat_promo_count AS mediaVolume
     FROM project_ledger p
     JOIN (SELECT project_id, SUM(total_face_amount) total_face_amount, SUM(total_tickets) total_tickets FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
@@ -130,7 +158,7 @@ export function getAlerts(db) {
   return shows.flatMap((show) => {
     const alerts = [];
     if (show.occupancyRate < 60) alerts.push({ projectId: show.id, level: 'high', type: 'low_occupancy', message: `${show.name}上座率仅 ${show.occupancyRate}%` });
-    if (show.mediaVolume > 700 && show.occupancyRate < 70) alerts.push({ projectId: show.id, level: 'high', type: 'high_media_low_conversion', message: `${show.name}声量较高但票房转化偏低` });
+    if (show.mediaVolume > 700 && show.salesCompletionRate < 75) alerts.push({ projectId: show.id, level: 'high', type: 'high_media_low_conversion', message: `${show.name}宣传量较高，但售票完成率仅 ${show.salesCompletionRate}%` });
     return alerts;
   });
 }
