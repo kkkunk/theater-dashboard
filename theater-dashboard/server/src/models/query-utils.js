@@ -25,10 +25,7 @@ export function round(value, digits = 2) {
 }
 
 export const channels = [
-  ['大麦', 'damai_revenue'], ['猫眼', 'maoyan_revenue'], ['公众号', 'wechat_revenue'],
-  ['抖音', 'douyin_revenue'], ['小程序', 'miniapp_revenue'], ['App', 'app_revenue'],
-  ['网站', 'website_revenue'], ['窗口', 'counter_revenue'], ['秀动', 'xiudong_revenue'],
-  ['票星球', 'piao_star_revenue'], ['小票点', 'small_ticket_revenue'], ['主办', 'organizer_revenue'],
+  ['保利', 'organizer_revenue'], ['大麦', 'damai_revenue'], ['其他', 'other_revenue'],
 ];
 
 export function channelRevenueSql(alias = 'o') {

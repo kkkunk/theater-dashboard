@@ -34,7 +34,7 @@ test('health endpoint reports an available database', async () => {
 test('dashboard endpoints return frontend-ready data', async () => {
   const endpoints = [
     '/api/dashboard/summary', '/api/dashboard/trends', '/api/dashboard/channels',
-    '/api/dashboard/operations?grain=day', '/api/dashboard/shows', '/api/dashboard/alerts',
+    '/api/dashboard/media-platforms', '/api/dashboard/operations?grain=day', '/api/dashboard/shows', '/api/dashboard/alerts',
   ];
   for (const endpoint of endpoints) {
     const { response, body } = await get(endpoint);
@@ -45,19 +45,19 @@ test('dashboard endpoints return frontend-ready data', async () => {
 
 test('show list and detail expose all analysis sections', async () => {
   const list = await get('/api/shows');
-  assert.equal(list.body.data.length, 10);
+  assert.equal(list.body.data.length, 8);
   const detail = await get('/api/shows/1');
   assert.equal(detail.response.status, 200);
   assert.ok(detail.body.data.timeline.length > 20);
   assert.ok(detail.body.data.strategyEvents.length >= 3);
-  assert.equal(detail.body.data.channelBreakdown.length, 12);
-  assert.ok(detail.body.data.show.expectedTickets > 0);
-  assert.ok(detail.body.data.show.salesCompletionRate >= 0);
+  assert.equal(detail.body.data.channelBreakdown.length, 3);
+  assert.equal(detail.body.data.show.expectedTickets, 0);
+  assert.equal(detail.body.data.show.salesCompletionRate, null);
   assert.equal(detail.body.data.audience, undefined);
   assert.ok(detail.body.data.period);
 });
 
-test('operations master table aggregates sales, publicity and audience growth', async () => {
+test('operations master table separates complimentary tickets and aggregates media growth', async () => {
   const result = await get('/api/dashboard/operations?days=30&grain=week');
   assert.equal(result.response.status, 200);
   assert.equal(result.body.data.grain, 'week');
@@ -66,15 +66,15 @@ test('operations master table aggregates sales, publicity and audience growth', 
     assert.equal(typeof row.totalTickets, 'number');
     assert.equal(typeof row.totalRevenue, 'number');
     assert.equal(typeof row.totalPublicity, 'number');
-    assert.equal(typeof row.memberGrowth, 'number');
+    assert.equal(typeof row.complimentaryTickets, 'number');
     assert.equal(typeof row.mediaFollowerGrowth, 'number');
   }
 });
 
 test('review endpoints return channel and strategy rankings', async () => {
-  const channels = await get('/api/reviews/channels');
-  assert.equal(channels.body.data.rows.length, 12);
-  assert.equal(channels.body.data.rows[0].channel, '大麦');
+  const channels = await get('/api/reviews/channels?days=365');
+  assert.equal(channels.body.data.rows.length, 3);
+  assert.deepEqual(new Set(channels.body.data.rows.map((row) => row.channel)), new Set(['保利', '大麦', '其他']));
   const strategies = await get('/api/reviews/strategies');
   assert.ok(strategies.body.data.rows.length >= 3);
   assert.equal(strategies.body.data.bestPractices.length, 5);
@@ -117,15 +117,33 @@ test('seed data preserves inventory, target and time-series integrity', () => {
   const inventorySold = db.prepare('SELECT SUM(issued_count - remaining_count) FROM ticket_price').pluck().get();
   const missingDates = db.prepare('SELECT COUNT(*) FROM order_detail WHERE order_date IS NULL').pluck().get();
   const orphanAudience = db.prepare('SELECT COUNT(*) FROM order_detail o LEFT JOIN audience a ON a.phone = o.phone WHERE a.id IS NULL').pluck().get();
-  const missingTargets = db.prepare('SELECT COUNT(*) FROM project_ledger WHERE expected_ticket_count <= 0').pluck().get();
+  const unverifiedTargets = db.prepare('SELECT COUNT(*) FROM project_ledger WHERE expected_ticket_count <= 0').pluck().get();
   const memberDays = db.prepare('SELECT COUNT(*) FROM member_growth_daily').pluck().get();
   const mediaFollowerGrowth = db.prepare('SELECT SUM(follower_growth) FROM media_daily').pluck().get();
   assert.equal(orderTickets, inventorySold);
   assert.equal(missingDates, 0);
   assert.equal(orphanAudience, 0);
-  assert.equal(missingTargets, 0);
+  assert.equal(unverifiedTargets, 6);
   assert.equal(memberDays, 90);
   assert.ok(mediaFollowerGrowth > 0);
+});
+
+test('active project opening dates, targets and channel totals match the daily ticket source', () => {
+  const rows = db.prepare(`
+    SELECT p.project_name name, p.show_time showTime, p.promotion_start_date openingDate,
+      p.expected_ticket_count expectedTickets, p.forecast_retail_revenue estimatedRevenue,
+      SUM(o.total_tickets) soldTickets, ROUND(SUM(o.total_face_amount), 2) revenue,
+      ROUND(SUM(o.organizer_revenue), 2) polyRevenue,
+      ROUND(SUM(o.damai_revenue), 2) damaiRevenue,
+      ROUND(SUM(o.other_revenue), 2) otherRevenue
+    FROM project_ledger p JOIN order_detail o ON o.project_id = p.id
+    WHERE p.project_name LIKE '%秦腔经典专场%' OR p.project_name = '《灵笼》动画视听音乐会'
+    GROUP BY p.id ORDER BY p.show_time
+  `).all();
+  assert.deepEqual(rows, [
+    { name: '秦腔绝技“主角”同款《秦腔经典专场》巡回演出', showTime: '2026-09-06 19:30', openingDate: '2026-08-08', expectedTickets: 540, estimatedRevenue: 100000, soldTickets: 118, revenue: 24170, polyRevenue: 7254, damaiRevenue: 12282, otherRevenue: 4634 },
+    { name: '《灵笼》动画视听音乐会', showTime: '2026-10-24 19:30', openingDate: '2026-08-11', expectedTickets: 640, estimatedRevenue: 250000, soldTickets: 43, revenue: 9440, polyRevenue: 2824, damaiRevenue: 5678, otherRevenue: 938 },
+  ]);
 });
 
 test('invalid parameters use stable JSON errors', async () => {

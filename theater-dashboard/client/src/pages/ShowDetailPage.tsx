@@ -67,7 +67,7 @@ export function ShowDetailPage() {
       <div className="show-score"><Star size={16} fill="currentColor" /><strong>{show.douban_score}</strong><span>豆瓣评分</span></div>
       <div className="hero-metric"><span>累计票房</span><strong>{formatCurrency(show.revenue, true)}</strong><small>{formatNumber(show.soldTickets)} 张票</small></div>
       <div className="hero-metric"><span>当前上座率</span><strong className={show.occupancyRate < 60 ? 'danger-text' : ''}>{show.occupancyRate}%</strong><small>容量 {formatNumber(show.capacity)}</small></div>
-      <div className="hero-metric"><span>售票完成率</span><strong className={show.salesCompletionRate < 60 ? 'danger-text' : ''}>{show.salesCompletionRate}%</strong><small>目标 {formatNumber(show.expectedTickets)} 张</small></div>
+      <div className="hero-metric"><span>售票完成率</span><strong className={show.salesCompletionRate != null && show.salesCompletionRate < 60 ? 'danger-text' : ''}>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</strong><small>{show.expectedTickets ? `目标 ${formatNumber(show.expectedTickets)} 张` : '目标售票数待补'}</small></div>
     </section>
 
     <Panel title="声量 → 票房时间线" eyebrow="宣发事件与销售曲线对齐" action={<span className="legend-note"><i className="green" />累计票房<i className="blue" />媒体声量<i className="orange" />策略节点</span>}>
@@ -77,9 +77,9 @@ export function ShowDetailPage() {
     <div className="detail-two-column">
       <Panel title="渠道转化拆解" eyebrow="票房贡献 Top 8"><Chart option={channelOption} height={310} ariaLabel="单场演出渠道票房排名" /></Panel>
       <Panel title="售票目标完成进度" eyebrow="实际售票 / 预计售票">
-        <div className="sales-goal" aria-label={`售票完成率 ${show.salesCompletionRate}%`}>
-          <div className="goal-orbit" style={{ background: `conic-gradient(#183525 ${Math.min(show.salesCompletionRate, 100) * 3.6}deg, #dce2d7 0deg)` }}><div><strong>{show.salesCompletionRate}%</strong><span>{show.salesCompletionRate > 100 ? `超额 ${Math.round(show.salesCompletionRate - 100)}%` : '当前完成率'}</span></div></div>
-          <div className="goal-ledger"><div><span>预计售票</span><strong>{formatNumber(show.expectedTickets)}<small>张</small></strong></div><div><span>实际售票</span><strong>{formatNumber(show.soldTickets)}<small>张</small></strong></div><div><span>{show.salesCompletionRate > 100 ? '超额售票' : '剩余目标'}</span><strong>{formatNumber(show.salesCompletionRate > 100 ? show.soldTickets - show.expectedTickets : show.remainingGoal)}<small>张</small></strong></div></div>
+        <div className="sales-goal" aria-label={show.salesCompletionRate == null ? '预计售票目标待补' : `售票完成率 ${show.salesCompletionRate}%`}>
+          <div className="goal-orbit" style={{ background: `conic-gradient(#183525 ${Math.min(show.salesCompletionRate ?? 0, 100) * 3.6}deg, #dce2d7 0deg)` }}><div><strong>{show.salesCompletionRate == null ? '—' : `${show.salesCompletionRate}%`}</strong><span>{show.salesCompletionRate == null ? '暂无目标' : show.salesCompletionRate > 100 ? `超额 ${Math.round(show.salesCompletionRate - 100)}%` : '当前完成率'}</span></div></div>
+          <div className="goal-ledger"><div><span>预计售票</span><strong>{show.expectedTickets ? formatNumber(show.expectedTickets) : '待补'}{show.expectedTickets ? <small>张</small> : null}</strong></div><div><span>实际付费售票</span><strong>{formatNumber(show.soldTickets)}<small>张</small></strong></div><div><span>{show.salesCompletionRate != null && show.salesCompletionRate > 100 ? '超额售票' : '剩余目标'}</span><strong>{show.salesCompletionRate == null ? '—' : formatNumber(show.salesCompletionRate > 100 ? show.soldTickets - show.expectedTickets : show.remainingGoal)}{show.salesCompletionRate == null ? null : <small>张</small>}</strong></div></div>
         </div>
       </Panel>
     </div>

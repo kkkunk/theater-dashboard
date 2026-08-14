@@ -1,6 +1,6 @@
 import { initDb, getDb } from './schema.js';
 
-const REPORT_DATE = '2026-08-08';
+const REPORT_DATE = '2026-08-13';
 const DAY = 86_400_000;
 
 function rngFactory(seed = 20260807) {
@@ -32,16 +32,34 @@ function weightedPick(entries) {
 }
 
 const shows = [
-  { name: '法语原版音乐剧《巴黎圣母院》', troupe: '法国巴特兰剧团', director: '吕克·普拉蒙东', actor: '伊莲·赛加拉', type: '音乐剧', subtype: '音乐剧', ip: '经典名著改编', subject: '文学', theme: '爱情与命运', style: '经典', mood: '震撼', venue: '大剧场', time: '2026-06-14 19:30', occupancy: .94, media: 1.25, conversion: 1.25, score: 9.3, raters: 28500, capacity: 1800, pred: 1450000, forecast: 1580000 },
-  { name: '话剧《雷雨》经典版', troupe: '北京人民艺术剧院', director: '曹禺', actor: '濮存昕', type: '戏剧', subtype: '话剧', ip: '文学经典', subject: '现实主义', theme: '家庭伦理', style: '写实', mood: '压抑', venue: '中剧场', time: '2026-06-22 19:30', occupancy: .84, media: .65, conversion: 1.18, score: 8.9, raters: 15200, capacity: 1200, pred: 760000, forecast: 820000 },
-  { name: '杨丽萍导演作品《孔雀》', troupe: '云南杨丽萍文化传播', director: '杨丽萍', actor: '杨丽萍', type: '舞剧', subtype: '舞剧', ip: '原创IP', subject: '民族', theme: '自然之美', style: '民族', mood: '唯美', venue: '大剧场', time: '2026-07-05 19:30', occupancy: .91, media: 1.1, conversion: 1.2, score: 8.7, raters: 12300, capacity: 1800, pred: 1280000, forecast: 1420000 },
-  { name: '童话音乐剧《小王子》', troupe: '上海儿童艺术剧院', director: '陈薪伊', actor: '刘畅', type: '儿童剧', subtype: '儿童剧', ip: '世界经典童话', subject: '童话', theme: '成长与爱', style: '奇幻', mood: '温暖', venue: '小剧场', time: '2026-07-12 15:00', occupancy: .62, media: 1.5, conversion: .52, score: 9.0, raters: 9800, capacity: 800, pred: 420000, forecast: 500000, anomaly: '高声量低转化' },
-  { name: '维也纳宫廷乐团音乐会', troupe: '维也纳宫廷乐团', director: '约翰·施特劳斯', actor: '', type: '音乐会', subtype: '音乐会', ip: '经典曲目', subject: '古典', theme: '经典', style: '优雅', mood: '庄重', venue: '大剧场', time: '2026-07-20 19:30', occupancy: .88, media: .48, conversion: 1.42, score: 8.4, raters: 4200, capacity: 1800, pred: 1350000, forecast: 1480000 },
-  { name: '悬疑话剧《无人生还》', troupe: '上海话剧艺术中心', director: '林奕', actor: '何念', type: '戏剧', subtype: '话剧', ip: '阿加莎经典', subject: '悬疑', theme: '人性拷问', style: '悬疑', mood: '紧张', venue: '中剧场', time: '2026-08-10 19:30', occupancy: .86, media: .95, conversion: 1.08, score: 9.1, raters: 21000, capacity: 1200, pred: 820000, forecast: 900000 },
-  { name: '昆曲《牡丹亭》全本', troupe: '江苏省昆剧院', director: '白先勇', actor: '单雯', type: '戏曲', subtype: '昆曲', ip: '古典文学', subject: '古典', theme: '爱情', style: '古典', mood: '缠绵', venue: '中剧场', time: '2026-08-15 19:30', occupancy: .55, media: .35, conversion: .8, score: 9.2, raters: 6800, capacity: 1200, pred: 520000, forecast: 580000, anomaly: '上座率偏低' },
-  { name: '音乐剧《粉丝来信》中文版', troupe: '上海文化广场', director: '高瑞嘉', actor: '徐均朔', type: '音乐剧', subtype: '音乐剧', ip: '韩国原创IP', subject: '文艺', theme: '梦想与回忆', style: '文艺', mood: '感动', venue: '大剧场', time: '2026-08-20 19:30', occupancy: .97, media: 1.65, conversion: 1.35, score: 8.6, raters: 18500, capacity: 1800, pred: 1480000, forecast: 1650000 },
-  { name: '现代舞剧《春之祭》', troupe: '北京当代芭蕾舞团', director: '王媛媛', actor: '王亚彬', type: '舞剧', subtype: '现代舞', ip: '原创IP', subject: '现代', theme: '生命与轮回', style: '先锋', mood: '震撼', venue: '大剧场', time: '2026-08-25 19:30', occupancy: .48, media: 1.2, conversion: .42, score: 7.9, raters: 3200, capacity: 1800, pred: 950000, forecast: 1080000, anomaly: '高声量低转化' },
-  { name: '开心麻花《夏洛特烦恼》', troupe: '开心麻花', director: '闫非', actor: '沈腾', type: '综艺', subtype: '舞台剧', ip: '电影IP改编', subject: '喜剧', theme: '青春', style: '搞笑', mood: '开心', venue: '大剧场', time: '2026-08-30 19:30', occupancy: .92, media: 1.3, conversion: 1.22, score: 8.5, raters: 32000, capacity: 1800, pred: 1380000, forecast: 1520000 },
+  { name: '《你好，疯子！》', troupe: '数据文件未提供', director: '', actor: '', type: '戏剧', subtype: '话剧', ip: '舞台作品', subject: '现实', theme: '人性', style: '戏剧', mood: '张力', venue: '剧场', time: '2024-11-09 19:30', occupancy: 1, media: .35, conversion: 1, score: 0, raters: 0, capacity: 2558, compRate: 176 / 2558, actualRevenue: 1495930.60 },
+  { name: '音乐剧《芝加哥》', troupe: '数据文件未提供', director: '', actor: '', type: '音乐剧', subtype: '音乐剧', ip: '经典音乐剧', subject: '都市', theme: '欲望', style: '百老汇', mood: '热烈', venue: '剧场', time: '2025-05-04 19:30', occupancy: 1, media: 1.15, conversion: 1, score: 0, raters: 0, capacity: 2760, compRate: 360 / 2760, actualRevenue: 1106526 },
+  { name: '《温暖的味道》', troupe: '数据文件未提供', director: '', actor: '', type: '戏剧', subtype: '话剧', ip: '现实题材', subject: '乡村', theme: '温暖', style: '现实', mood: '温暖', venue: '剧场', time: '2025-06-28 19:30', occupancy: 1, media: .4, conversion: 1, score: 0, raters: 0, capacity: 2545, compRate: 296 / 2545, actualRevenue: 1252046.15 },
+  { name: '杨丽萍作品《孔雀》', troupe: '数据文件未提供', director: '杨丽萍', actor: '', type: '舞剧', subtype: '舞剧', ip: '原创IP', subject: '民族', theme: '生命', style: '民族', mood: '唯美', venue: '剧场', time: '2025-12-13 19:30', occupancy: 1, media: 1.3, conversion: 1, score: 0, raters: 0, capacity: 4055, compRate: 575 / 4055, actualRevenue: 1675750 },
+  { name: '话剧《雷雨》', troupe: '数据文件未提供', director: '', actor: '', type: '戏剧', subtype: '话剧', ip: '文学经典', subject: '现实主义', theme: '家庭', style: '经典', mood: '压抑', venue: '剧场', time: '2026-05-10 19:30', occupancy: 1, media: .8, conversion: 1, score: 0, raters: 0, capacity: 1104, compRate: 124 / 1104, actualRevenue: 215877 },
+  { name: '吕思清小提琴音乐会', troupe: '数据文件未提供', director: '', actor: '吕思清', type: '音乐会', subtype: '音乐会', ip: '艺术家项目', subject: '古典', theme: '音乐', style: '古典', mood: '典雅', venue: '剧场', time: '2026-07-04 19:30', occupancy: 1, media: .55, conversion: 1, score: 0, raters: 0, capacity: 1113, compRate: 91 / 1113, actualRevenue: 327293 },
+  {
+    name: '秦腔绝技“主角”同款《秦腔经典专场》巡回演出', troupe: '租场项目', director: '', actor: '', type: '戏曲', subtype: '秦腔', ip: '传统文化', subject: '戏曲', theme: '秦腔经典', style: '传统', mood: '热烈', venue: '待补', time: '2026-09-06 19:30', promotionStart: '2026-08-08', occupancy: 118 / 540, media: .7, conversion: 1, score: 0, raters: 0, capacity: 540, expectedTickets: 540, estimatedRevenue: 100000, compRate: 0, actualRevenue: 24170,
+    dailySales: [
+      ['2026-08-08', [29, 4888], [29, 5702], [9, 2254]], ['2026-08-09', [6, 1316], [4, 784], [5, 1330]],
+      ['2026-08-10', [0, 0], [7, 1582], [3, 658]], ['2026-08-11', [1, 196], [5, 980], [1, 266]],
+      ['2026-08-12', [2, 462], [8, 1918], [0, 0]], ['2026-08-13', [2, 392], [6, 1316], [1, 126]],
+    ],
+    mediaSummary: [
+      ['公众号', '2026-08-03', '2026-08-09', 186765, 186829, 644, 2],
+      ['小红书', '2026-08-06', '2026-08-08', 12332, 12332, 27, 4],
+      ['微博', '2026-08-03', '2026-08-09', 13723, 13720, 15, 2],
+      ['视频号', '2026-08-06', '2026-08-08', 3356, 3356, 45, 2],
+      ['抖音', '2026-08-06', '2026-08-08', 7156, 7156, 6, 2],
+    ],
+  },
+  {
+    name: '《灵笼》动画视听音乐会', troupe: '租场项目', director: '', actor: '', type: '音乐会', subtype: '动画视听音乐会', ip: '动画IP', subject: '科幻', theme: '灵笼', style: '视听音乐会', mood: '沉浸', venue: '待补', time: '2026-10-24 19:30', promotionStart: '2026-08-11', occupancy: 43 / 640, media: 1.05, conversion: 1, score: 0, raters: 0, capacity: 640, expectedTickets: 640, estimatedRevenue: 250000, compRate: 0, actualRevenue: 9440,
+    dailySales: [
+      ['2026-08-11', [9, 2324], [20, 3900], [3, 938]], ['2026-08-12', [5, 500], [4, 920], [0, 0]],
+      ['2026-08-13', [0, 0], [2, 858], [0, 0]],
+    ],
+  },
 ];
 
 const tierTemplates = {
@@ -59,16 +77,25 @@ const tierTemplates = {
   ],
 };
 
+function buildTierTemplate(capacity) {
+  const shares = [.07, .13, .2, .24, .22];
+  const prices = [880, 680, 480, 280, 180, 100];
+  let allocated = 0;
+  return prices.map((price, index) => {
+    const issued = index === prices.length - 1 ? capacity - allocated : Math.round(capacity * shares[index]);
+    allocated += issued;
+    return [`${index + 1}等票`, price, issued];
+  });
+}
+
 const channelWeights = [
-  ['damai_revenue', .30], ['maoyan_revenue', .20], ['wechat_revenue', .11],
-  ['douyin_revenue', .09], ['miniapp_revenue', .08], ['app_revenue', .06],
-  ['website_revenue', .04], ['counter_revenue', .04], ['xiudong_revenue', .025],
-  ['piao_star_revenue', .025], ['small_ticket_revenue', .02], ['organizer_revenue', .02],
+  ['organizer_revenue', .46], ['damai_revenue', .44], ['other_revenue', .10],
 ];
 
 const db = initDb(getDb());
 
 db.exec(`
+  DELETE FROM media_platform_summary;
   DELETE FROM media_daily;
   DELETE FROM external_info;
   DELETE FROM member_growth_daily;
@@ -87,14 +114,19 @@ const insertShow = db.prepare(`
     style_type, mood_type, theater_name, venue, show_name, performance_type,
     show_time, promotion_start_date, ip_score, director_douban_avg,
     troupe_douban_avg, douban_score, douban_raters, expected_ticket_count, predicted_retail_revenue,
-    forecast_retail_revenue
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    forecast_retail_revenue, target_revenue
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const insertMedia = db.prepare(`
   INSERT INTO media_daily
   (project_id, metric_date, xiaohongshu_notes, douyin_likes, wechat_posts, external_comments, follower_growth)
   VALUES (?, ?, ?, ?, ?, ?, ?)
+`);
+const insertMediaSummary = db.prepare(`
+  INSERT INTO media_platform_summary
+  (project_id, platform, period_start, period_end, start_followers, end_followers, interactions, content_count, source_level, is_placeholder)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'summary', 0)
 `);
 const insertPrice = db.prepare(`
   INSERT INTO ticket_price
@@ -126,14 +158,14 @@ const channelColumns = channelWeights.map(([name]) => name);
 const insertOrder = db.prepare(`
   INSERT INTO order_detail (
     order_no, project_id, show_time, order_date, phone, tier_level, total_tickets,
-    total_face_amount, first_purchase, repeat_purchase, ${channelColumns.join(', ')},
+    total_face_amount, is_complimentary, first_purchase, repeat_purchase, ${channelColumns.join(', ')},
     musical_fan, drama_fan, dance_fan, children_fan, concert_fan,
     order_1_ticket, order_2_tickets, order_3_tickets, order_4plus_tickets,
     youth_orders, middle_age_orders, senior_orders,
     high_tier_orders, mid_tier_orders, low_tier_orders,
     local_city_orders, local_province_orders,
     first_day_tickets, first_day_orders, first_day_new, first_day_repeat
-  ) VALUES (${Array(43).fill('?').join(', ')})
+  ) VALUES (${Array(35).fill('?').join(', ')})
 `);
 
 const rawOrders = [];
@@ -142,13 +174,13 @@ const showState = [];
 db.transaction(() => {
   shows.forEach((show, index) => {
     const showDate = show.time.slice(0, 10);
-    const promotionStart = addDays(showDate, -44);
+    const promotionStart = show.promotionStart || addDays(showDate, -44);
     const result = insertShow.run(
       show.name, show.name, show.troupe, show.director, show.actor, show.subtype,
       show.ip, show.venue, show.subject, show.theme, show.style, show.mood,
       '杭州临平大剧院', show.venue, show.name, show.type, show.time,
       promotionStart, show.score + .2, show.score - .2, show.score - .3,
-      show.score, show.raters, Math.round(show.capacity * .9), show.pred, show.forecast,
+      show.score, show.raters, show.expectedTickets || 0, null, show.estimatedRevenue || null, null,
     );
     const projectId = Number(result.lastInsertRowid);
     const lastMetricDate = showDate < REPORT_DATE ? showDate : REPORT_DATE;
@@ -167,8 +199,22 @@ db.transaction(() => {
       mediaByDate.set(date, xhs + douyin / 250 + wechat * 8 + comments / 5);
     }
 
+    const mediaTotal = [...mediaByDate.values()].reduce((sum, value) => sum + value, 0);
+    if (show.mediaSummary) {
+      show.mediaSummary.forEach(([platform, periodStart, periodEnd, startFollowers, endFollowers, interactions, contentCount]) => {
+        insertMediaSummary.run(projectId, platform, periodStart, periodEnd, startFollowers, endFollowers, interactions, contentCount);
+      });
+    } else {
+      const platformMix = [['公众号', .18], ['小红书', .28], ['微博', .12], ['视频号', .16], ['抖音', .26]];
+      platformMix.forEach(([platform, share], platformIndex) => {
+        const startFollowers = 8000 + projectId * 600 + platformIndex * 1700;
+        const growth = Math.max(0, Math.round(mediaTotal * Number(share) * .35));
+        insertMediaSummary.run(projectId, platform, promotionStart, lastMetricDate, startFollowers, startFollowers + growth, Math.round(mediaTotal * Number(share) * 3.2), Math.round(mediaTotal * Number(share) / 8));
+      });
+    }
+
     const targetSold = Math.round(show.capacity * show.occupancy);
-    const tiers = tierTemplates[show.capacity].map(([level, price, issued]) => ({ level, price, issued, sold: 0 }));
+    const tiers = (tierTemplates[show.capacity] || buildTierTemplate(show.capacity)).map(([level, price, issued]) => ({ level, price, issued, sold: 0 }));
     const salesDates = [...mediaByDate.keys()].map((date) => {
       const laggedMedia = mediaByDate.get(addDays(date, -3)) || mediaByDate.get(date) || 1;
       const daysToShow = dayDiff(date, showDate);
@@ -178,7 +224,24 @@ db.transaction(() => {
     });
 
     let sold = 0;
-    while (sold < targetSold) {
+    if (show.dailySales) {
+      const channelNames = ['organizer_revenue', 'damai_revenue', 'other_revenue'];
+      show.dailySales.forEach(([orderDate, ...channelSales]) => channelSales.forEach(([ticketCount, revenue], channelIndex) => {
+        let ticketsLeft = ticketCount;
+        let revenueLeft = revenue;
+        while (ticketsLeft > 0) {
+          const tier = tiers.find((item) => item.issued > item.sold);
+          const tickets = Math.min(ticketsLeft, tier.issued - tier.sold);
+          const amount = tickets === ticketsLeft ? revenueLeft : Math.round(revenue * tickets / ticketCount * 100) / 100;
+          tier.sold += tickets;
+          sold += tickets;
+          ticketsLeft -= tickets;
+          revenueLeft = Math.round((revenueLeft - amount) * 100) / 100;
+          rawOrders.push({ projectId, show, showDate, promotionStart, orderDate, tier: tier.level, price: amount / tickets, tickets, amount, channel: channelNames[channelIndex] });
+        }
+      }));
+    }
+    while (!show.dailySales && sold < targetSold) {
       const requested = weightedPick([
         { value: 1, weight: .52 }, { value: 2, weight: .34 },
         { value: 3, weight: .1 }, { value: 4, weight: .04 },
@@ -227,6 +290,7 @@ let phoneSequence = 13_800_000_000;
 const getLifetimeOrders = db.prepare('SELECT lifetime_orders FROM audience WHERE phone = ?').pluck();
 const ageChoices = [{ value: '青年', weight: .48 }, { value: '中年', weight: .37 }, { value: '老年', weight: .15 }];
 const regionChoices = [{ value: '本市', weight: .56 }, { value: '本省', weight: .25 }, { value: '跨省', weight: .19 }];
+const complimentaryRemaining = new Map(shows.map((show) => [show.name, Math.round(show.capacity * (show.compRate || 0))]));
 
 db.transaction(() => {
   rawOrders.forEach((order, index) => {
@@ -245,8 +309,11 @@ db.transaction(() => {
     }
 
     const isFirst = getLifetimeOrders.get(customer.phone) === 0 ? 1 : 0;
-    const amount = order.price * order.tickets;
-    const channel = weightedPick(channelWeights.map(([value, weight]) => ({ value, weight })));
+    const remainingComplimentary = complimentaryRemaining.get(order.show.name) || 0;
+    const complimentary = remainingComplimentary >= order.tickets ? 1 : 0;
+    if (complimentary) complimentaryRemaining.set(order.show.name, remainingComplimentary - order.tickets);
+    const amount = complimentary ? 0 : (order.amount ?? order.price * order.tickets);
+    const channel = order.channel || weightedPick(channelWeights.map(([value, weight]) => ({ value, weight })));
     const revenues = Object.fromEntries(channelColumns.map((name) => [name, name === channel ? amount : 0]));
     const type = order.show.type;
     const tierToken = order.tier.match(/\d|一|二|三|四|五|六/)?.[0] || '三';
@@ -255,7 +322,7 @@ db.transaction(() => {
 
     insertOrder.run(
       `ORD${String(index + 1).padStart(7, '0')}`, order.projectId, order.show.time,
-      order.orderDate, customer.phone, order.tier, order.tickets, amount, isFirst, 1 - isFirst,
+      order.orderDate, customer.phone, order.tier, order.tickets, amount, complimentary, isFirst, 1 - isFirst,
       ...channelColumns.map((name) => revenues[name]),
       type === '音乐剧' ? 1 : 0, type === '戏剧' ? 1 : 0, type === '舞剧' ? 1 : 0,
       type === '儿童剧' ? 1 : 0, type === '音乐会' ? 1 : 0,
@@ -270,6 +337,29 @@ db.transaction(() => {
       firstDay && isFirst ? 1 : 0, firstDay && !isFirst ? 1 : 0,
     );
     updateAudience.run(amount, customer.phone);
+  });
+})();
+
+db.transaction(() => {
+  showState.forEach(({ projectId, show }) => {
+    if (!show.actualRevenue) return;
+    const currentRevenue = db.prepare('SELECT SUM(total_face_amount) FROM order_detail WHERE project_id = ?').pluck().get(projectId);
+    if (!currentRevenue) return;
+    const factor = show.actualRevenue / currentRevenue;
+    db.prepare(`UPDATE order_detail SET
+      total_face_amount = ROUND(total_face_amount * ?, 2),
+      organizer_revenue = ROUND(organizer_revenue * ?, 2),
+      damai_revenue = ROUND(damai_revenue * ?, 2),
+      other_revenue = ROUND(other_revenue * ?, 2)
+      WHERE project_id = ? AND is_complimentary = 0
+    `).run(factor, factor, factor, factor, projectId);
+    const scaledRevenue = db.prepare('SELECT SUM(total_face_amount) FROM order_detail WHERE project_id = ?').pluck().get(projectId);
+    const adjustment = Math.round((show.actualRevenue - scaledRevenue) * 100) / 100;
+    if (adjustment) {
+      const finalOrder = db.prepare('SELECT id, organizer_revenue, damai_revenue, other_revenue FROM order_detail WHERE project_id = ? AND is_complimentary = 0 ORDER BY id DESC LIMIT 1').get(projectId);
+      const channelColumn = ['organizer_revenue', 'damai_revenue', 'other_revenue'].find((column) => finalOrder[column] > 0);
+      db.prepare(`UPDATE order_detail SET total_face_amount = total_face_amount + ?, ${channelColumn} = ${channelColumn} + ? WHERE id = ?`).run(adjustment, adjustment, finalOrder.id);
+    }
   });
 })();
 

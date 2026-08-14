@@ -62,6 +62,7 @@ export function initDb(database = getDb()) {
       expected_ticket_count INTEGER DEFAULT 0,
       predicted_retail_revenue REAL,
       forecast_retail_revenue REAL,
+      target_revenue REAL,
       first_day_revenue REAL DEFAULT 0,
       first_week_revenue REAL DEFAULT 0,
       mid_revenue REAL DEFAULT 0,
@@ -132,6 +133,8 @@ export function initDb(database = getDb()) {
       piao_star_revenue REAL DEFAULT 0,
       small_ticket_revenue REAL DEFAULT 0,
       organizer_revenue REAL DEFAULT 0,
+      other_revenue REAL DEFAULT 0,
+      is_complimentary INTEGER DEFAULT 0,
       musical_fan INTEGER DEFAULT 0,
       drama_fan INTEGER DEFAULT 0,
       dance_fan INTEGER DEFAULT 0,
@@ -188,6 +191,22 @@ export function initDb(database = getDb()) {
       new_members INTEGER NOT NULL DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS media_platform_summary (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      platform TEXT NOT NULL,
+      period_start TEXT NOT NULL,
+      period_end TEXT NOT NULL,
+      start_followers INTEGER,
+      end_followers INTEGER,
+      interactions INTEGER DEFAULT 0,
+      content_count INTEGER DEFAULT 0,
+      source_level TEXT DEFAULT 'summary',
+      is_placeholder INTEGER DEFAULT 0,
+      UNIQUE(project_id, platform, period_start, period_end),
+      FOREIGN KEY (project_id) REFERENCES project_ledger(id) ON DELETE CASCADE
+    );
+
   `);
 
   // Non-destructive migrations for databases created by v0.1.
@@ -196,6 +215,9 @@ export function initDb(database = getDb()) {
   ensureColumn(database, 'media_daily', 'follower_growth INTEGER DEFAULT 0');
   ensureColumn(database, 'order_detail', 'order_date TEXT');
   ensureColumn(database, 'order_detail', 'tier_level TEXT');
+  ensureColumn(database, 'order_detail', 'other_revenue REAL DEFAULT 0');
+  ensureColumn(database, 'order_detail', 'is_complimentary INTEGER DEFAULT 0');
+  ensureColumn(database, 'project_ledger', 'target_revenue REAL');
 
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_order_project_date ON order_detail(project_id, order_date);
@@ -204,6 +226,7 @@ export function initDb(database = getDb()) {
     CREATE INDEX IF NOT EXISTS idx_media_project_date ON media_daily(project_id, metric_date);
     CREATE INDEX IF NOT EXISTS idx_strategy_project ON promotion_strategy(project_id);
     CREATE INDEX IF NOT EXISTS idx_member_growth_date ON member_growth_daily(stat_date);
+    CREATE INDEX IF NOT EXISTS idx_media_summary_period ON media_platform_summary(period_start, period_end);
   `);
 
   return database;

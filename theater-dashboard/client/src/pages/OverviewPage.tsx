@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, CalendarDays, ChevronRight, CircleGauge, Megaphone, Radio, Target, Ticket, UserPlus, UsersRound } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CalendarDays, ChevronRight, CircleGauge, Gift, Megaphone, Radio, Search, Target, Ticket, UsersRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { apiGet } from '../api';
-import type { Alert, Channels, Operations, ShowCard, Summary, Trends } from '../types';
+import type { Alert, Channels, MediaPlatforms, Operations, ShowCard, Summary, Trends } from '../types';
 import { useShell } from '../components/AppShell';
 import { useRouter } from '../router';
 import { PageHeader } from '../components/PageHeader';
@@ -13,7 +13,7 @@ import { Chart, chartGrid, chartText, tooltip } from '../components/Chart';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import { dateTimeLabel, formatCurrency, formatNumber, shortDate } from '../utils/format';
 
-const periodOptions = [30, 60, 90];
+const periodOptions = [30, 60, 90, 365];
 const platformOptions = [{ value: 'all', label: '综合' }, { value: 'xiaohongshu', label: '小红书' }, { value: 'douyin', label: '抖音' }, { value: 'wechat', label: '公众号' }] as const;
 const grainOptions = [{ value: 'day', label: '日' }, { value: 'week', label: '周' }, { value: 'month', label: '月' }] as const;
 const typeColors: Record<string, string> = { 音乐剧: '#183525', 戏剧: '#60755f', 舞剧: '#94a58b', 儿童剧: '#b5c7a7', 音乐会: '#496850', 戏曲: '#7f9076', 综艺: '#a5b59a' };
@@ -21,14 +21,16 @@ const typeColors: Record<string, string> = { 音乐剧: '#183525', 戏剧: '#607
 export function OverviewPage() {
   const { openAgent } = useShell();
   const { navigate } = useRouter();
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState(365);
   const [platform, setPlatform] = useState<(typeof platformOptions)[number]['value']>('all');
   const [grain, setGrain] = useState<(typeof grainOptions)[number]['value']>('day');
   const [salesMetric, setSalesMetric] = useState<'tickets' | 'revenue'>('tickets');
+  const [search, setSearch] = useState('');
   const suffix = `?days=${days}`;
   const summary = useQuery({ queryKey: ['summary', days], queryFn: ({ signal }) => apiGet<Summary>(`/api/dashboard/summary${suffix}`, signal) });
   const trends = useQuery({ queryKey: ['trends', days, platform], queryFn: ({ signal }) => apiGet<Trends>(`/api/dashboard/trends${suffix}&platform=${platform}`, signal) });
   const channels = useQuery({ queryKey: ['channels', days], queryFn: ({ signal }) => apiGet<Channels>(`/api/dashboard/channels${suffix}`, signal) });
+  const mediaPlatforms = useQuery({ queryKey: ['media-platforms', days], queryFn: ({ signal }) => apiGet<MediaPlatforms>(`/api/dashboard/media-platforms${suffix}`, signal) });
   const operations = useQuery({ queryKey: ['operations', days, grain], queryFn: ({ signal }) => apiGet<Operations>(`/api/dashboard/operations${suffix}&grain=${grain}`, signal) });
   const shows = useQuery({ queryKey: ['show-cards'], queryFn: ({ signal }) => apiGet<ShowCard[]>('/api/dashboard/shows', signal) });
   const alerts = useQuery({ queryKey: ['alerts'], queryFn: ({ signal }) => apiGet<Alert[]>('/api/dashboard/alerts', signal) });
@@ -57,9 +59,17 @@ export function OverviewPage() {
     series: [{ type: 'pie' as const, radius: ['54%', '78%'], center: ['50%', '43%'], padAngle: 3, itemStyle: { borderRadius: 8, borderColor: '#F8F8F4', borderWidth: 4 }, label: { show: false }, data: channels.data?.rows.slice(0, 8).map((row) => ({ name: row.channel, value: row.revenue })) }],
   }), [channels.data]);
 
+  const mediaOption = useMemo(() => ({
+    tooltip: { ...tooltip, trigger: 'item' as const, formatter: '{b}<br/>{c} 次 · {d}%' },
+    legend: { type: 'scroll' as const, bottom: 0, textStyle: { color: chartText, fontSize: 11 }, itemWidth: 8, itemHeight: 8 },
+    color: ['#245E86', '#4B86AE', '#78A8C4', '#A9C8D9', '#D5E5ED'],
+    series: [{ type: 'pie' as const, radius: ['54%', '78%'], center: ['50%', '43%'], padAngle: 3, itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 4 }, label: { show: false }, data: mediaPlatforms.data?.rows.map((row) => ({ name: row.platform, value: row.interactions })) }],
+  }), [mediaPlatforms.data]);
+
   const metricLoading = summary.isLoading || trends.isLoading;
   return <div className="page overview-page">
-    <PageHeader eyebrow="THEATER INTELLIGENCE" title="演出经营图谱" description="把宣传节奏、售票目标与票房结果连成一张可行动的信息图。" onOpenAgent={openAgent} action={<div className="segmented" aria-label="统计周期">{periodOptions.map((period) => <button key={period} aria-pressed={days === period} className={days === period ? 'active' : ''} onClick={() => setDays(period)}>{period}天</button>)}</div>} />
+    <PageHeader eyebrow="THEATER INTELLIGENCE" title="营销数据看板" description="把宣发声量、会员数据与票房结果连成一张可行动的信息图。" onOpenAgent={openAgent} action={<div className="segmented" aria-label="统计周期">{periodOptions.map((period) => <button key={period} aria-pressed={days === period} className={days === period ? 'active' : ''} onClick={() => setDays(period)}>{period === 365 ? '1年' : `${period}天`}</button>)}</div>} />
+    <div className="project-search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索项目，直达单场分析" aria-label="搜索项目" />{search && <div className="project-search-results">{shows.data?.filter((show) => show.name.includes(search)).slice(0, 6).map((show) => <button key={show.id} onClick={() => navigate(`/shows/${show.id}`)}><span><strong>{show.name}</strong><small>{dateTimeLabel(show.showTime)}</small></span><ArrowRight size={15} /></button>)}{!shows.data?.some((show) => show.name.includes(search)) && <p>没有匹配项目</p>}</div>}</div>
 
     {metricLoading ? <LoadingState /> : summary.error ? <ErrorState message={summary.error.message} onRetry={() => summary.refetch()} /> : summary.data && <PerformancePulse summary={summary.data} />}
 
@@ -68,7 +78,7 @@ export function OverviewPage() {
         {trends.isLoading ? <LoadingState /> : trends.error ? <ErrorState message={trends.error.message} onRetry={() => trends.refetch()} /> : trends.data?.rows.length ? <Chart option={trendOption} height={330} ariaLabel="票房和媒体声量双轴趋势图" /> : <EmptyState />}
       </Panel>
       <Panel title="异常雷达" eyebrow="优先处理" action={<span className="alert-count">{alerts.data?.length || 0} 项</span>} className="alerts-panel">
-        {alerts.isLoading ? <LoadingState compact /> : alerts.error ? <ErrorState message={alerts.error.message} /> : alerts.data?.length ? <div className="alert-list">{alerts.data.map((alert, index) => <button key={`${alert.projectId}-${alert.type}`} onClick={() => navigate(`/shows/${alert.projectId}`)}>
+        {alerts.isLoading ? <LoadingState compact /> : alerts.error ? <ErrorState message={alerts.error.message} /> : alerts.data?.length ? <div className="alert-list">{alerts.data.map((alert) => <button className={`alert-${alert.level}`} key={`${alert.projectId}-${alert.type}`} onClick={() => navigate(`/shows/${alert.projectId}`)}>
           <span className="alert-icon"><AlertTriangle size={17} /></span><span><strong>{alert.type === 'low_occupancy' ? '上座率预警' : '转化效率预警'}</strong><small>{alert.message}</small></span><ChevronRight size={16} />
         </button>)}</div> : <div className="healthy-state"><CircleGauge size={25} /><strong>当前状态健康</strong><span>暂无需要立即处理的异常</span></div>}
         <div className="alert-foot"><Radio size={14} />基于声量与累计售票自动检测</div>
@@ -76,29 +86,32 @@ export function OverviewPage() {
     </div>
 
     <div className="overview-secondary-grid">
+      <Panel title="平台互动量占比" eyebrow="新媒体表现" action={<span className="subtle-chip media-chip">五个平台</span>}>
+        {mediaPlatforms.isLoading ? <LoadingState /> : mediaPlatforms.data?.rows.length ? <Chart option={mediaOption} height={280} ariaLabel="五个平台互动量占比环形图" /> : <EmptyState />}
+      </Panel>
       <Panel title="渠道贡献" eyebrow="票房来源" action={<button className="text-link" onClick={() => navigate('/reviews')}>查看复盘<ArrowRight size={14} /></button>}>
         {channels.isLoading ? <LoadingState /> : channels.data?.rows.length ? <Chart option={channelOption} height={280} ariaLabel="渠道票房贡献环形图" /> : <EmptyState />}
       </Panel>
       <Panel title="售票完成率排行" eyebrow="实际售票 / 预计售票" action={<span className="subtle-chip"><Target size={13} />目标进度</span>}>
-        {shows.isLoading ? <LoadingState /> : shows.data?.length ? <div className="completion-ranking">{[...shows.data].sort((a, b) => b.salesCompletionRate - a.salesCompletionRate).slice(0, 6).map((show, index) => <button key={show.id} onClick={() => navigate(`/shows/${show.id}`)}>
-          <span className="completion-rank">{String(index + 1).padStart(2, '0')}</span><span className="completion-name"><strong>{show.name}</strong><small>{formatNumber(show.soldTickets)} / {formatNumber(show.expectedTickets)} 张</small></span><span className="completion-bar"><i style={{ width: `${Math.min(show.salesCompletionRate, 100)}%` }} /></span><b>{show.salesCompletionRate}%</b>
+        {shows.isLoading ? <LoadingState /> : shows.data?.length ? <div className="completion-ranking">{[...shows.data].sort((a, b) => (b.salesCompletionRate ?? -1) - (a.salesCompletionRate ?? -1)).slice(0, 6).map((show, index) => <button key={show.id} onClick={() => navigate(`/shows/${show.id}`)}>
+          <span className="completion-rank">{String(index + 1).padStart(2, '0')}</span><span className="completion-name"><strong>{show.name}</strong><small>{show.expectedTickets ? `${formatNumber(show.soldTickets)} / ${formatNumber(show.expectedTickets)} 张` : `${formatNumber(show.soldTickets)} 张 · 目标待补`}</small></span><span className="completion-bar"><i style={{ width: `${Math.min(show.salesCompletionRate ?? 0, 100)}%` }} /></span><b>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</b>
         </button>)}</div> : <EmptyState />}
       </Panel>
     </div>
 
     <Panel title="经营总表" eyebrow="时间维度经营脉络" action={<div className="segmented compact-segmented" aria-label="经营总表时间粒度">{grainOptions.map((item) => <button key={item.value} aria-pressed={grain === item.value} className={grain === item.value ? 'active' : ''} onClick={() => setGrain(item.value)}>{item.label}</button>)}</div>} className="operations-panel">
-      {operations.isLoading ? <LoadingState /> : operations.error ? <ErrorState message={operations.error.message} onRetry={() => operations.refetch()} /> : operations.data?.rows.length ? <div className="operations-table-wrap"><table className="operations-table"><thead><tr><th><CalendarDays size={13} />时间</th><th className="sales-switch-cell"><div className="sales-metric-switch" role="group" aria-label="切换售票指标"><button className={salesMetric === 'revenue' ? 'active' : ''} aria-pressed={salesMetric === 'revenue'} onClick={() => setSalesMetric('revenue')}>总售票金额</button><span aria-hidden="true">/</span><button className={salesMetric === 'tickets' ? 'active' : ''} aria-pressed={salesMetric === 'tickets'} onClick={() => setSalesMetric('tickets')}>总售票数</button></div></th><th><Megaphone size={13} />总宣传量</th><th><UserPlus size={13} />会员增长数</th><th><UsersRound size={13} />新媒体粉丝数增长</th></tr></thead><tbody>{operations.data.rows.map((row) => <tr key={row.periodStart}><td><strong>{grain === 'month' ? row.periodStart.slice(0, 7) : grain === 'week' ? `${row.periodStart.slice(5)} 起` : row.periodStart.slice(5)}</strong><small>{grain === 'day' ? shortDate(row.periodStart) : `${row.periodStart.slice(5)}—${row.periodEnd.slice(5)}`}</small></td><td><motion.b key={`${row.periodStart}-${salesMetric}`} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }}>{formatNumber(salesMetric === 'tickets' ? row.totalTickets : row.totalRevenue)}</motion.b><span>{salesMetric === 'tickets' ? '张' : '元'}</span></td><td><b>{formatNumber(row.totalPublicity)}</b><span>次</span></td><td><b>{formatNumber(row.memberGrowth)}</b><span>人</span></td><td><b>{formatNumber(row.mediaFollowerGrowth)}</b><span>人</span></td></tr>)}</tbody></table></div> : <EmptyState />}
+      {operations.isLoading ? <LoadingState /> : operations.error ? <ErrorState message={operations.error.message} onRetry={() => operations.refetch()} /> : operations.data?.rows.length ? <div className="operations-table-wrap"><table className="operations-table"><thead><tr><th><CalendarDays size={13} />时间</th><th className="sales-switch-cell"><div className="sales-metric-switch" role="group" aria-label="切换售票指标"><button className={salesMetric === 'revenue' ? 'active' : ''} aria-pressed={salesMetric === 'revenue'} onClick={() => setSalesMetric('revenue')}>总售票金额</button><span aria-hidden="true">/</span><button className={salesMetric === 'tickets' ? 'active' : ''} aria-pressed={salesMetric === 'tickets'} onClick={() => setSalesMetric('tickets')}>总售票数</button></div></th><th><Gift size={13} />赠票数</th><th><Megaphone size={13} />总宣传量</th><th><UsersRound size={13} />平台净增粉丝</th></tr></thead><tbody>{operations.data.rows.map((row) => <tr key={row.periodStart}><td><strong>{grain === 'month' ? row.periodStart.slice(0, 7) : grain === 'week' ? `${row.periodStart.slice(5)} 起` : row.periodStart.slice(5)}</strong><small>{grain === 'day' ? shortDate(row.periodStart) : `${row.periodStart.slice(5)}—${row.periodEnd.slice(5)}`}</small></td><td><motion.b key={`${row.periodStart}-${salesMetric}`} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }}>{formatNumber(salesMetric === 'tickets' ? row.totalTickets : row.totalRevenue)}</motion.b><span>{salesMetric === 'tickets' ? '张' : '元'}</span></td><td><b>{formatNumber(row.complimentaryTickets)}</b><span>张</span></td><td><b>{formatNumber(row.totalPublicity)}</b><span>次</span></td><td><b>{formatNumber(row.mediaFollowerGrowth)}</b><span>人</span></td></tr>)}</tbody></table></div> : <EmptyState />}
     </Panel>
 
     <Panel title="近期演出" eyebrow="按演出日期排列" action={<span className="range-note"><Ticket size={14} />{shows.data?.length || 0} 个项目</span>} className="shows-panel">
       {shows.isLoading ? <LoadingState /> : shows.error ? <ErrorState message={shows.error.message} /> : <div className="show-card-row">{shows.data?.map((show, index) => {
-        const risk = show.salesCompletionRate < 60; const attention = show.salesCompletionRate < 80;
+        const pending = show.salesCompletionRate == null; const risk = show.salesCompletionRate != null && show.salesCompletionRate < 60; const attention = show.salesCompletionRate != null && show.salesCompletionRate < 80;
         return <motion.button key={show.id} className="show-card" onClick={() => navigate(`/shows/${show.id}`)} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * .025 }}>
           <div className="show-card-accent" style={{ background: typeColors[show.type] || '#62a8ff' }} />
-          <div className="show-card-top"><span style={{ color: typeColors[show.type] || '#62a8ff' }}>{show.type}</span><em className={risk ? 'risk' : attention ? 'attention' : 'healthy'}>{risk ? '风险' : attention ? '关注' : '健康'}</em></div>
+          <div className="show-card-top"><span style={{ color: typeColors[show.type] || '#62a8ff' }}>{show.type}</span><em className={pending ? 'pending' : risk ? 'risk' : attention ? 'attention' : 'healthy'}>{pending ? '目标待补' : risk ? '风险' : attention ? '关注' : '健康'}</em></div>
           <strong>{show.name}</strong><small>{dateTimeLabel(show.showTime)} · {show.venue}</small>
-          <div className="progress-head"><span>目标进度</span><b>{show.salesCompletionRate}%</b></div><div className="progress"><i style={{ width: `${Math.min(show.salesCompletionRate, 100)}%`, background: risk ? '#a95d50' : attention ? '#9a7642' : '#183525' }} /></div>
-          <div className="show-card-foot"><span>{formatNumber(show.soldTickets)} / {formatNumber(show.expectedTickets)} 张</span><span>宣传量 {formatNumber(show.mediaVolume)}</span></div>
+          <div className="progress-head"><span>目标进度</span><b>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</b></div><div className="progress"><i style={{ width: `${Math.min(show.salesCompletionRate ?? 0, 100)}%`, background: risk ? '#a95d50' : attention ? '#9a7642' : '#183525' }} /></div>
+          <div className="show-card-foot"><span>{formatNumber(show.soldTickets)} 张 · 赠票 {formatNumber(show.complimentaryTickets)}</span><span>宣传量 {formatNumber(show.mediaVolume)}</span></div>
         </motion.button>;
       })}</div>}
     </Panel>

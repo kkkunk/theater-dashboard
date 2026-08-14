@@ -1,4 +1,4 @@
-import { BarChart3, Bot, CalendarRange, LayoutDashboard, Menu, Sparkles, X } from 'lucide-react';
+import { BarChart3, Bot, CalendarRange, LayoutDashboard, Menu, Sparkles, UserRoundSearch, X } from 'lucide-react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { AgentDrawer } from './AgentDrawer';
 import { useRouter } from '../router';
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/', label: '经营总览', icon: LayoutDashboard, end: true },
   { to: '/shows/1', label: '单场分析', icon: CalendarRange },
   { to: '/reviews', label: '渠道与策略', icon: BarChart3 },
+  { to: '/members', label: '会员售票分析', icon: UserRoundSearch },
 ];
 
 const ShellContext = createContext<{ openAgent: () => void } | null>(null);
@@ -21,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <aside className={`sidebar ${mobileNav ? 'open' : ''}`}>
       <div className="brand">
         <div className="brand-mark" aria-hidden="true"><span /><span /><span /></div>
-        <div><strong>演析</strong><small>宣发转化看板</small></div>
+        <div><strong>演析</strong><small>营销数据看板</small></div>
         <button className="icon-button close-nav" onClick={() => setMobileNav(false)} aria-label="关闭导航"><X size={18} /></button>
       </div>
       <nav aria-label="主导航">
@@ -32,8 +33,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         })}
       </nav>
       <div className="sidebar-bottom">
-        <div className="data-status"><span className="live-dot" /><div><strong>数据运行正常</strong><small>基准日 2026.08.07</small></div></div>
-        <p>演示数据 · 每日更新</p>
+        <div className="data-status"><span className="live-dot" /><div><strong>数据运行正常</strong><small>基准日 2026.08.13</small></div></div>
+        <p>校验数据 · 每日更新</p>
       </div>
     </aside>
     {mobileNav && <button className="nav-backdrop" onClick={() => setMobileNav(false)} aria-label="关闭导航遮罩" />}
