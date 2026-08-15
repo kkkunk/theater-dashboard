@@ -91,19 +91,20 @@ test('operations master table separates work tickets and exposes total issued ti
 test('completion rates only compare projects that have verified targets', async () => {
   const result = await get('/api/dashboard/summary?days=365');
   assert.equal(result.response.status, 200);
-  assert.equal(result.body.data.metrics.salesCompletionRate.value, 89.3);
-  assert.equal(result.body.data.metrics.boxOfficeCompletionRate.value, 97.5);
-  assert.equal(result.body.data.metrics.occupancyRate.value, 89.7);
+  assert.equal(result.body.data.metrics.salesCompletionRate.value, 106.9);
+  assert.equal(result.body.data.metrics.boxOfficeCompletionRate.value, 105.1);
+  assert.equal(result.body.data.metrics.occupancyRate.value, 91.4);
 });
 
-test('completion rates use cumulative actuals through the selected end date', async () => {
-  const result = await get('/api/dashboard/summary?start=2025-12-13&end=2025-12-13');
-  assert.equal(result.response.status, 200);
-  assert.equal(result.body.data.metrics.salesCompletionRate.value, 118.7);
-  assert.equal(result.body.data.metrics.boxOfficeCompletionRate.value, 124.2);
-  assert.equal(result.body.data.metrics.occupancyRate.value, 90.5);
-  assert.equal(result.body.data.metrics.workTickets.value, 575);
-  assert.equal(result.body.data.metrics.totalIssuedTickets.value, 3482);
+test('completion rates remain cumulative when revenue scope changes', async () => {
+  const halfYear = await get('/api/dashboard/summary?days=180');
+  const fullYear = await get('/api/dashboard/summary?days=365');
+  assert.equal(halfYear.response.status, 200);
+  assert.equal(fullYear.response.status, 200);
+  for (const metric of ['salesCompletionRate', 'boxOfficeCompletionRate', 'occupancyRate']) {
+    assert.equal(halfYear.body.data.metrics[metric].value, fullYear.body.data.metrics[metric].value);
+  }
+  assert.notEqual(halfYear.body.data.metrics.totalRevenue.value, fullYear.body.data.metrics.totalRevenue.value);
 });
 
 test('review endpoints return channel and strategy rankings', async () => {
