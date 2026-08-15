@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, CalendarDays, ChevronRight, CircleGauge, Gift, Megaphone, Radio, Search, Target, Ticket, UsersRound } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CalendarDays, ChevronRight, CircleGauge, Gift, Maximize2, Megaphone, Radio, Search, Target, Ticket, UsersRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { apiGet } from '../api';
 import type { Alert, Channels, MediaPlatforms, Operations, ShowCard, Summary, Trends } from '../types';
@@ -14,9 +14,10 @@ import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import { dateTimeLabel, formatCurrency, formatNumber, shortDate } from '../utils/format';
 
 const periodOptions = [30, 60, 90, 365];
-const platformOptions = [{ value: 'all', label: '综合' }, { value: 'xiaohongshu', label: '小红书' }, { value: 'douyin', label: '抖音' }, { value: 'wechat', label: '公众号' }] as const;
+const platformOptions = [{ value: 'all', label: '综合' }, { value: 'xiaohongshu', label: '小红书' }, { value: 'douyin', label: '抖音' }, { value: 'wechat', label: '公众号' }, { value: 'weibo', label: '微博' }, { value: 'video', label: '视频号' }] as const;
 const grainOptions = [{ value: 'day', label: '日' }, { value: 'week', label: '周' }, { value: 'month', label: '月' }] as const;
 const typeColors: Record<string, string> = { 音乐剧: '#183525', 戏剧: '#60755f', 舞剧: '#94a58b', 儿童剧: '#b5c7a7', 音乐会: '#496850', 戏曲: '#7f9076', 综艺: '#a5b59a' };
+const alertLabels: Record<string, string> = { low_occupancy: '上座率预警', sales_completion: '售票完成预警', box_office_completion: '票房完成预警', high_media_low_conversion: '转化效率预警' };
 
 export function OverviewPage() {
   const { openAgent } = useShell();
@@ -35,22 +36,30 @@ export function OverviewPage() {
   const shows = useQuery({ queryKey: ['show-cards'], queryFn: ({ signal }) => apiGet<ShowCard[]>('/api/dashboard/shows', signal) });
   const alerts = useQuery({ queryKey: ['alerts'], queryFn: ({ signal }) => apiGet<Alert[]>('/api/dashboard/alerts', signal) });
 
-  const trendOption = useMemo(() => ({
+  const trendOption = useMemo(() => {
+    const rows = trends.data?.rows || [];
+    const startValue = Math.max(rows.length - 30, 0);
+    return ({
     animationDuration: 700,
     color: ['#183525', '#94a58b'],
-    tooltip: { ...tooltip, trigger: 'axis' as const, valueFormatter: (value: unknown) => formatNumber(Number(value)) },
+    tooltip: { ...tooltip, trigger: 'axis' as const, valueFormatter: (value: unknown) => value == null || value === '-' || !Number.isFinite(Number(value)) ? '暂无数据' : formatNumber(Number(value)) },
     legend: { top: 0, right: 0, textStyle: { color: chartText }, itemWidth: 18, itemHeight: 3 },
-    grid: { top: 44, left: 44, right: 48, bottom: 28 },
-    xAxis: { type: 'category' as const, boundaryGap: false, data: trends.data?.rows.map((row) => shortDate(row.date)), axisLine: { lineStyle: { color: chartGrid } }, axisTick: { show: false }, axisLabel: { color: chartText, fontSize: 11, interval: Math.max(Math.floor((trends.data?.rows.length || 1) / 6) - 1, 0) } },
+    grid: { top: 44, left: 44, right: 48, bottom: 62 },
+    xAxis: { type: 'category' as const, boundaryGap: false, data: rows.map((row) => shortDate(row.date)), axisLine: { lineStyle: { color: chartGrid } }, axisTick: { show: false }, axisLabel: { color: chartText, fontSize: 11, hideOverlap: true } },
     yAxis: [
       { type: 'value' as const, name: '票房（元）', nameTextStyle: { color: chartText }, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => value >= 10000 ? `${value / 10000}万` : value } },
-      { type: 'value' as const, name: '声量指数', nameTextStyle: { color: chartText }, splitLine: { show: false }, axisLabel: { color: chartText } },
+      { type: 'value' as const, name: '宣传内容数', nameTextStyle: { color: chartText }, splitLine: { show: false }, axisLabel: { color: chartText } },
+    ],
+    dataZoom: [
+      { type: 'inside' as const, startValue, endValue: Math.max(rows.length - 1, 0), zoomOnMouseWheel: true, moveOnMouseWheel: true, moveOnMouseMove: true },
+      { type: 'slider' as const, startValue, endValue: Math.max(rows.length - 1, 0), height: 18, bottom: 7, brushSelect: false, borderColor: 'transparent', backgroundColor: '#eef0e9', fillerColor: 'rgba(36,94,134,.18)', handleSize: 18, handleStyle: { color: '#245e86', borderColor: '#fff', borderWidth: 2 }, moveHandleStyle: { color: '#245e86' }, dataBackground: { lineStyle: { color: '#94a58b', opacity: .45 }, areaStyle: { color: '#dfe7da', opacity: .55 } }, selectedDataBackground: { lineStyle: { color: '#245e86' }, areaStyle: { color: '#a9c8d9', opacity: .5 } }, textStyle: { color: chartText, fontSize: 9 } },
     ],
     series: [
-      { name: '日票房', type: 'line' as const, smooth: .32, symbol: 'none', data: trends.data?.rows.map((row) => row.revenue), lineStyle: { width: 3 }, areaStyle: { color: 'rgba(148,165,139,.12)' } },
-      { name: '媒体声量', type: 'bar' as const, yAxisIndex: 1, barMaxWidth: 12, data: trends.data?.rows.map((row) => row.mediaVolume), itemStyle: { color: '#B9D9B8', borderRadius: [8, 8, 0, 0], borderColor: '#183525', borderWidth: 1 } },
+      { name: '日票房', type: 'line' as const, smooth: .32, symbol: 'none', data: rows.map((row) => row.revenue), lineStyle: { width: 3 }, areaStyle: { color: 'rgba(148,165,139,.12)' } },
+      { name: '宣传内容数', type: 'bar' as const, yAxisIndex: 1, barMaxWidth: 12, data: rows.map((row) => row.mediaVolume), itemStyle: { color: '#B9D9B8', borderRadius: [8, 8, 0, 0], borderColor: '#183525', borderWidth: 1 } },
     ],
-  }), [trends.data]);
+  });
+  }, [trends.data]);
 
   const channelOption = useMemo(() => ({
     tooltip: { ...tooltip, trigger: 'item' as const, formatter: '{b}<br/>{c} 元 · {d}%' },
@@ -74,12 +83,12 @@ export function OverviewPage() {
     {metricLoading ? <LoadingState /> : summary.error ? <ErrorState message={summary.error.message} onRetry={() => summary.refetch()} /> : summary.data && <PerformancePulse summary={summary.data} />}
 
     <div className="overview-primary-grid">
-      <Panel title="票房与媒体声量" eyebrow={`${days}日联动趋势`} action={<div className="trend-actions"><div className="platform-pills" aria-label="媒体平台">{platformOptions.map((item) => <button key={item.value} aria-pressed={platform === item.value} className={platform === item.value ? 'active' : ''} onClick={() => setPlatform(item.value)}>{item.label}</button>)}</div><span className="range-note"><CalendarDays size={14} />{summary.data?.range.start.slice(5).replace('-', '.')}—{summary.data?.range.end.slice(5).replace('-', '.')}</span></div>}>
-        {trends.isLoading ? <LoadingState /> : trends.error ? <ErrorState message={trends.error.message} onRetry={() => trends.refetch()} /> : trends.data?.rows.length ? <Chart option={trendOption} height={330} ariaLabel="票房和媒体声量双轴趋势图" /> : <EmptyState />}
+      <Panel title="票房与媒体声量" eyebrow="最近30日趋势" action={<div className="trend-actions"><div className="platform-pills" aria-label="媒体平台">{platformOptions.map((item) => <button key={item.value} aria-pressed={platform === item.value} className={platform === item.value ? 'active' : ''} onClick={() => setPlatform(item.value)}>{item.label}</button>)}</div><button className="chart-open-button" aria-label="展开票房与媒体声量表" data-tooltip="展开" onClick={() => navigate('/trends')}><Maximize2 size={15} /></button></div>}>
+        {trends.isLoading ? <LoadingState /> : trends.error ? <ErrorState message={trends.error.message} onRetry={() => trends.refetch()} /> : trends.data?.rows.length ? <Chart option={trendOption} height={330} ariaLabel="最近30日票房和媒体声量双轴趋势图" /> : <EmptyState />}
       </Panel>
       <Panel title="异常雷达" eyebrow="优先处理" action={<span className="alert-count">{alerts.data?.length || 0} 项</span>} className="alerts-panel">
         {alerts.isLoading ? <LoadingState compact /> : alerts.error ? <ErrorState message={alerts.error.message} /> : alerts.data?.length ? <div className="alert-list">{alerts.data.map((alert) => <button className={`alert-${alert.level}`} key={`${alert.projectId}-${alert.type}`} onClick={() => navigate(`/shows/${alert.projectId}`)}>
-          <span className="alert-icon"><AlertTriangle size={17} /></span><span><strong>{alert.type === 'low_occupancy' ? '上座率预警' : '转化效率预警'}</strong><small>{alert.message}</small></span><ChevronRight size={16} />
+          <span className="alert-icon"><AlertTriangle size={17} /></span><span><strong>{alertLabels[alert.type] || '经营预警'}</strong><small>{alert.message}</small></span><ChevronRight size={16} />
         </button>)}</div> : <div className="healthy-state"><CircleGauge size={25} /><strong>当前状态健康</strong><span>暂无需要立即处理的异常</span></div>}
         <div className="alert-foot"><Radio size={14} />基于声量与累计售票自动检测</div>
       </Panel>
@@ -100,7 +109,7 @@ export function OverviewPage() {
     </div>
 
     <Panel title="经营总表" eyebrow="时间维度经营脉络" action={<div className="segmented compact-segmented" aria-label="经营总表时间粒度">{grainOptions.map((item) => <button key={item.value} aria-pressed={grain === item.value} className={grain === item.value ? 'active' : ''} onClick={() => setGrain(item.value)}>{item.label}</button>)}</div>} className="operations-panel">
-      {operations.isLoading ? <LoadingState /> : operations.error ? <ErrorState message={operations.error.message} onRetry={() => operations.refetch()} /> : operations.data?.rows.length ? <div className="operations-table-wrap"><table className="operations-table"><thead><tr><th><CalendarDays size={13} />时间</th><th className="sales-switch-cell"><div className="sales-metric-switch" role="group" aria-label="切换售票指标"><button className={salesMetric === 'revenue' ? 'active' : ''} aria-pressed={salesMetric === 'revenue'} onClick={() => setSalesMetric('revenue')}>总售票金额</button><span aria-hidden="true">/</span><button className={salesMetric === 'tickets' ? 'active' : ''} aria-pressed={salesMetric === 'tickets'} onClick={() => setSalesMetric('tickets')}>总售票数</button></div></th><th><Gift size={13} />赠票数</th><th><Megaphone size={13} />总宣传量</th><th><UsersRound size={13} />平台净增粉丝</th></tr></thead><tbody>{operations.data.rows.map((row) => <tr key={row.periodStart}><td><strong>{grain === 'month' ? row.periodStart.slice(0, 7) : grain === 'week' ? `${row.periodStart.slice(5)} 起` : row.periodStart.slice(5)}</strong><small>{grain === 'day' ? shortDate(row.periodStart) : `${row.periodStart.slice(5)}—${row.periodEnd.slice(5)}`}</small></td><td><motion.b key={`${row.periodStart}-${salesMetric}`} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }}>{formatNumber(salesMetric === 'tickets' ? row.totalTickets : row.totalRevenue)}</motion.b><span>{salesMetric === 'tickets' ? '张' : '元'}</span></td><td><b>{formatNumber(row.complimentaryTickets)}</b><span>张</span></td><td><b>{formatNumber(row.totalPublicity)}</b><span>次</span></td><td><b>{formatNumber(row.mediaFollowerGrowth)}</b><span>人</span></td></tr>)}</tbody></table></div> : <EmptyState />}
+      {operations.isLoading ? <LoadingState /> : operations.error ? <ErrorState message={operations.error.message} onRetry={() => operations.refetch()} /> : operations.data?.rows.length ? <div className="operations-table-wrap"><table className="operations-table"><thead><tr><th><CalendarDays size={13} />时间</th><th className="sales-switch-cell"><div className="sales-metric-switch" role="group" aria-label="切换售票指标"><button className={salesMetric === 'revenue' ? 'active' : ''} aria-pressed={salesMetric === 'revenue'} onClick={() => setSalesMetric('revenue')}>总售票金额</button><span aria-hidden="true">/</span><button className={salesMetric === 'tickets' ? 'active' : ''} aria-pressed={salesMetric === 'tickets'} onClick={() => setSalesMetric('tickets')}>总售票数</button></div></th><th><Gift size={13} />赠票数</th><th><Megaphone size={13} />总宣传量</th><th><UsersRound size={13} />平台净增粉丝</th></tr></thead><tbody>{operations.data.rows.map((row) => <tr key={row.periodStart}><td><strong>{grain === 'month' ? row.periodStart.slice(0, 7) : grain === 'week' ? `${row.periodStart.slice(5)} 起` : row.periodStart.slice(5)}</strong><small>{grain === 'day' ? shortDate(row.periodStart) : `${row.periodStart.slice(5)}—${row.periodEnd.slice(5)}`}</small></td><td><motion.b key={`${row.periodStart}-${salesMetric}`} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }}>{formatNumber(salesMetric === 'tickets' ? row.totalTickets : row.totalRevenue)}</motion.b><span>{salesMetric === 'tickets' ? '张' : '元'}</span></td><td><b>{formatNumber(row.complimentaryTickets)}</b><span>张</span></td><td><b>{row.totalPublicity == null ? '暂无数据' : formatNumber(row.totalPublicity)}</b>{row.totalPublicity == null ? null : <span>次</span>}</td><td><b>{row.mediaFollowerGrowth == null ? '暂无数据' : `${row.mediaFollowerGrowth > 0 ? '+' : ''}${formatNumber(row.mediaFollowerGrowth)}`}</b>{row.mediaFollowerGrowth == null ? null : <span>人</span>}</td></tr>)}</tbody></table></div> : <EmptyState />}
     </Panel>
 
     <Panel title="近期演出" eyebrow="按演出日期排列" action={<span className="range-note"><Ticket size={14} />{shows.data?.length || 0} 个项目</span>} className="shows-panel">

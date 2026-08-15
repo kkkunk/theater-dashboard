@@ -7,7 +7,7 @@ import { useRouter } from '../router';
 import { PageHeader } from '../components/PageHeader';
 import { Panel } from '../components/Panel';
 import { Chart, chartGrid, chartText, tooltip } from '../components/Chart';
-import { ErrorState, LoadingState } from '../components/DataState';
+import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import type { Channels, StrategyReview } from '../types';
 import { formatCurrency, formatNumber } from '../utils/format';
 
@@ -41,15 +41,15 @@ export function ReviewsPage() {
 
   const totalChannelRevenue = channels.data?.rows.reduce((sum, row) => sum + row.revenue, 0) || 0;
   const averageRoi = strategies.data?.rows.filter((row) => row.roi != null).reduce((sum, row) => sum + (row.roi || 0), 0) || 0;
-  const validStrategies = strategies.data?.rows.filter((row) => row.roi != null).length || 1;
+  const validStrategies = strategies.data?.rows.filter((row) => row.roi != null).length || 0;
   return <div className="page reviews-page">
     <PageHeader eyebrow="跨项目复盘" title="渠道与策略效率" description="把单场经验沉淀为可复用的宣发决策依据。" onOpenAgent={openAgent} action={<label className="filter-select"><Filter size={15} /><select value={type} onChange={(event) => setType(event.target.value)}>{showTypes.map((item) => <option key={item || 'all'} value={item}>{item || '全部演出类型'}</option>)}</select></label>} />
 
     <div className="review-summary">
       <article><span><Target size={16} />渠道总票房</span><strong>{formatCurrency(totalChannelRevenue, true)}</strong><small>{channels.data?.rows.length || 0} 个有效渠道</small></article>
-      <article><span><Sparkles size={16} />平均策略 ROI</span><strong>{(averageRoi / validStrategies).toFixed(1)}×</strong><small>不含零成本策略</small></article>
+      <article><span><Sparkles size={16} />平均策略 ROI</span><strong>{validStrategies ? `${(averageRoi / validStrategies).toFixed(1)}×` : '暂无数据'}</strong><small>不含零成本策略</small></article>
       <article><span><Medal size={16} />最佳渠道</span><strong>{channels.data?.rows[0]?.channel || '—'}</strong><small>贡献 {channels.data?.rows[0]?.sharePct || 0}% 票房</small></article>
-      <article><span><Lightbulb size={16} />最佳策略</span><strong>{strategies.data?.rows[0]?.strategyType || '—'}</strong><small>ROI {strategies.data?.rows[0]?.roi || 0}×</small></article>
+      <article><span><Lightbulb size={16} />最佳策略</span><strong>{strategies.data?.rows[0]?.strategyType || '暂无数据'}</strong><small>{strategies.data?.rows[0]?.roi == null ? '待补策略投入与影响金额' : `ROI ${strategies.data.rows[0].roi}×`}</small></article>
     </div>
 
     <div className="review-grid">
@@ -57,7 +57,7 @@ export function ReviewsPage() {
         {channels.isLoading ? <LoadingState /> : channels.error ? <ErrorState message={channels.error.message} onRetry={() => channels.refetch()} /> : <Chart option={channelOption} height={390} ariaLabel="渠道效率排行榜" />}
       </Panel>
       <Panel title="策略投入与影响" eyebrow="气泡大小代表使用次数" action={<div className="chart-legend"><span><i style={{ background: '#94a58b' }} />新媒体</span><span><i style={{ background: '#183525' }} />票务</span><span><i style={{ background: '#b9d9b8' }} />社群</span></div>}>
-        {strategies.isLoading ? <LoadingState /> : strategies.error ? <ErrorState message={strategies.error.message} onRetry={() => strategies.refetch()} /> : <Chart option={strategyOption} height={390} ariaLabel="策略投入影响金额气泡图" />}
+        {strategies.isLoading ? <LoadingState /> : strategies.error ? <ErrorState message={strategies.error.message} onRetry={() => strategies.refetch()} /> : strategies.data?.rows.length ? <Chart option={strategyOption} height={390} ariaLabel="策略投入影响金额气泡图" /> : <EmptyState label="暂无真实策略投入与效果数据" />}
       </Panel>
     </div>
 
@@ -66,9 +66,9 @@ export function ReviewsPage() {
     </Panel>
 
     <Panel title="历史最佳实践" eyebrow="按项目策略组合 ROI 排名" className="practices-panel">
-      {strategies.isLoading ? <LoadingState /> : <div className="practice-grid">{strategies.data?.bestPractices.map((item, index) => <button key={item.projectId} onClick={() => navigate(`/shows/${item.projectId}`)}>
+      {strategies.isLoading ? <LoadingState /> : strategies.data?.bestPractices.length ? <div className="practice-grid">{strategies.data.bestPractices.map((item, index) => <button key={item.projectId} onClick={() => navigate(`/shows/${item.projectId}`)}>
         <div className="practice-rank">0{index + 1}</div><span className="practice-type">{item.showType}</span><h3>{item.showName}</h3><p>{item.strategyMix}</p><div><span>累计投入 <strong>{formatCurrency(item.totalCost, true)}</strong></span><span>组合 ROI <strong>{item.roi}×</strong></span></div><em>查看项目<ArrowUpRight size={14} /></em>
-      </button>)}</div>}
+      </button>)}</div> : <EmptyState label="暂无可复用的真实策略案例" />}
     </Panel>
   </div>;
 }

@@ -56,7 +56,7 @@ export function AgentDrawer({ open, onClose }: { open: boolean; onClose: () => v
         <input ref={inputRef} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="例如：最近30天票房最高的5场演出" aria-label="输入数据问题" />
         <button type="submit" disabled={!question.trim() || mutation.isPending} aria-label="发送问题"><ArrowUp size={18} /></button>
       </form>
-      <p className="agent-disclaimer">结果来自演示数据库，策略影响金额为人工录入口径</p>
+      <p className="agent-disclaimer">结果来自已核验数据源；缺失字段不会推算或补造</p>
     </aside>
   </>;
 }

@@ -26,11 +26,11 @@ export function answerQuestion(db, question, query = {}) {
   if (/小红书.*(前\s*\d|上座率|声量)/.test(text)) {
     const limit = Math.min(Number(text.match(/前\s*(\d+)/)?.[1] || 3), 10);
     const rows = db.prepare(`
-      SELECT p.id projectId, p.project_name showName, SUM(m.xiaohongshu_notes) xiaohongshuNotes,
-        ROUND(100.0 * o.sold / t.capacity, 1) occupancyRate
+      SELECT p.id projectId, p.project_name showName, SUM(m.xiaohongshu_content_count) xiaohongshuNotes,
+        ROUND(100.0 * o.sold / NULLIF(t.capacity, 0), 1) occupancyRate
       FROM project_ledger p JOIN media_daily m ON m.project_id = p.id
-      JOIN (SELECT project_id, SUM(total_tickets) sold FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
-      JOIN (SELECT project_id, SUM(issued_count) capacity FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
+      JOIN (SELECT project_id, SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) sold FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
+      LEFT JOIN (SELECT project_id, SUM(issued_count) capacity FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
       WHERE m.metric_date BETWEEN ? AND ? GROUP BY p.id ORDER BY xiaohongshuNotes DESC LIMIT ?
     `).all(range.start, range.end, limit);
     return result(`已找出小红书声量前 ${rows.length} 的演出并对齐上座率。`, 'bar', rows, { intent: 'xiaohongshu_vs_occupancy', range });
@@ -52,8 +52,8 @@ export function answerQuestion(db, question, query = {}) {
     const rows = db.prepare(`
       WITH show_rates AS (
         SELECT p.id projectId, p.project_name showName, p.expected_ticket_count expectedTickets,
-          SUM(o.total_tickets) soldTickets,
-          100.0 * SUM(o.total_tickets) / NULLIF(p.expected_ticket_count, 0) completionRate
+          SUM(CASE WHEN o.is_complimentary = 0 THEN o.total_tickets ELSE 0 END) soldTickets,
+          100.0 * SUM(CASE WHEN o.is_complimentary = 0 THEN o.total_tickets ELSE 0 END) / NULLIF(p.expected_ticket_count, 0) completionRate
         FROM order_detail o JOIN project_ledger p ON p.id = o.project_id
         GROUP BY p.id
       )
@@ -78,8 +78,8 @@ export function answerQuestion(db, question, query = {}) {
     }
     const row = db.prepare(`
       SELECT
-        (SELECT COALESCE(SUM(total_tickets), 0) FROM order_detail WHERE order_date BETWEEN ? AND ?) totalTickets,
-        (SELECT ROUND(COALESCE(SUM(xiaohongshu_notes + douyin_likes / 100.0 + wechat_posts + external_comments), 0), 0)
+        (SELECT COALESCE(SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END), 0) FROM order_detail WHERE order_date BETWEEN ? AND ?) totalTickets,
+        (SELECT COALESCE(SUM(wechat_content_count + xiaohongshu_content_count + weibo_content_count + video_content_count + douyin_content_count), 0)
           FROM media_daily WHERE metric_date BETWEEN ? AND ?) totalPublicity,
         (SELECT COALESCE(SUM(new_members), 0) FROM member_growth_daily WHERE stat_date BETWEEN ? AND ?) memberGrowth
     `).get(aggregateRange.start, aggregateRange.end, aggregateRange.start, aggregateRange.end, aggregateRange.start, aggregateRange.end);

@@ -63,6 +63,8 @@ export function initDb(database = getDb()) {
       predicted_retail_revenue REAL,
       forecast_retail_revenue REAL,
       target_revenue REAL,
+      ticket_source_file TEXT,
+      media_source_file TEXT,
       first_day_revenue REAL DEFAULT 0,
       first_week_revenue REAL DEFAULT 0,
       mid_revenue REAL DEFAULT 0,
@@ -156,6 +158,7 @@ export function initDb(database = getDb()) {
       first_day_orders INTEGER DEFAULT 0,
       first_day_new INTEGER DEFAULT 0,
       first_day_repeat INTEGER DEFAULT 0,
+      source_order_count INTEGER,
       FOREIGN KEY (project_id) REFERENCES project_ledger(id) ON DELETE CASCADE,
       FOREIGN KEY (phone) REFERENCES audience(phone)
     );
@@ -169,6 +172,13 @@ export function initDb(database = getDb()) {
       wechat_posts INTEGER DEFAULT 0,
       external_comments INTEGER DEFAULT 0,
       follower_growth INTEGER DEFAULT 0,
+      wechat_content_count INTEGER DEFAULT 0,
+      xiaohongshu_content_count INTEGER DEFAULT 0,
+      weibo_content_count INTEGER DEFAULT 0,
+      video_content_count INTEGER DEFAULT 0,
+      douyin_content_count INTEGER DEFAULT 0,
+      interaction_count INTEGER DEFAULT 0,
+      view_count INTEGER DEFAULT 0,
       UNIQUE(project_id, metric_date),
       FOREIGN KEY (project_id) REFERENCES project_ledger(id) ON DELETE CASCADE
     );
@@ -188,7 +198,8 @@ export function initDb(database = getDb()) {
     CREATE TABLE IF NOT EXISTS member_growth_daily (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       stat_date TEXT NOT NULL UNIQUE,
-      new_members INTEGER NOT NULL DEFAULT 0
+      new_members INTEGER NOT NULL DEFAULT 0,
+      total_members INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS media_platform_summary (
@@ -200,6 +211,7 @@ export function initDb(database = getDb()) {
       start_followers INTEGER,
       end_followers INTEGER,
       interactions INTEGER DEFAULT 0,
+      views INTEGER DEFAULT 0,
       content_count INTEGER DEFAULT 0,
       source_level TEXT DEFAULT 'summary',
       is_placeholder INTEGER DEFAULT 0,
@@ -218,6 +230,18 @@ export function initDb(database = getDb()) {
   ensureColumn(database, 'order_detail', 'other_revenue REAL DEFAULT 0');
   ensureColumn(database, 'order_detail', 'is_complimentary INTEGER DEFAULT 0');
   ensureColumn(database, 'project_ledger', 'target_revenue REAL');
+  ensureColumn(database, 'project_ledger', 'ticket_source_file TEXT');
+  ensureColumn(database, 'project_ledger', 'media_source_file TEXT');
+  ensureColumn(database, 'order_detail', 'source_order_count INTEGER');
+  ensureColumn(database, 'media_daily', 'wechat_content_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'media_daily', 'xiaohongshu_content_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'media_daily', 'weibo_content_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'media_daily', 'video_content_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'media_daily', 'douyin_content_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'media_daily', 'interaction_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'media_daily', 'view_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'member_growth_daily', 'total_members INTEGER');
+  ensureColumn(database, 'media_platform_summary', 'views INTEGER DEFAULT 0');
 
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_order_project_date ON order_detail(project_id, order_date);

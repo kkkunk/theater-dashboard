@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav aria-label="主导航">
         <span className="nav-label">工作台</span>
         {navItems.map(({ to, label, icon: Icon }) => {
-          const active = label === '经营总览' ? pathname === '/' : label === '单场分析' ? pathname.startsWith('/shows/') : pathname === to;
+          const active = label === '经营总览' ? pathname === '/' || pathname === '/trends' : label === '单场分析' ? pathname.startsWith('/shows/') : pathname === to;
           return <a key={to} href={to} className={active ? 'active' : ''} onClick={(event) => { event.preventDefault(); navigate(to); }}><Icon size={18} strokeWidth={1.8} /><span>{label}</span></a>;
         })}
       </nav>

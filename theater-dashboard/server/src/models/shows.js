@@ -17,7 +17,7 @@ export function listShows(db, query = {}) {
     LEFT JOIN (SELECT project_id, SUM(total_face_amount) revenue,
       SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) soldTickets
       FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
-    JOIN (SELECT project_id, SUM(issued_count) capacity FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
+    LEFT JOIN (SELECT project_id, SUM(issued_count) capacity FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
     ${where} ORDER BY p.show_time
   `).all(...params);
 }
@@ -27,15 +27,17 @@ export function getShowDetail(db, id) {
     SELECT p.*,
       ROUND(o.revenue, 0) revenue, o.sold_tickets soldTickets, o.complimentary_tickets complimentaryTickets, o.orders,
       p.expected_ticket_count expectedTickets,
-      MAX(p.expected_ticket_count - o.sold_tickets, 0) remainingGoal,
+      CASE WHEN p.expected_ticket_count IS NULL THEN NULL ELSE MAX(p.expected_ticket_count - o.sold_tickets, 0) END remainingGoal,
       ROUND(100.0 * o.sold_tickets / NULLIF(p.expected_ticket_count, 0), 1) salesCompletionRate,
-      t.capacity, t.remaining, ROUND(100.0 * o.sold_tickets / t.capacity, 1) occupancyRate
+      COALESCE(p.forecast_retail_revenue, p.target_revenue) estimatedRevenue,
+      ROUND(100.0 * o.revenue / NULLIF(COALESCE(p.forecast_retail_revenue, p.target_revenue), 0), 1) boxOfficeCompletionRate,
+      t.capacity, t.remaining, ROUND(100.0 * o.sold_tickets / NULLIF(t.capacity, 0), 1) occupancyRate
     FROM project_ledger p
     JOIN (SELECT project_id, SUM(total_face_amount) revenue,
       SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) sold_tickets,
       SUM(CASE WHEN is_complimentary = 1 THEN total_tickets ELSE 0 END) complimentary_tickets,
-      SUM(CASE WHEN is_complimentary = 0 THEN 1 ELSE 0 END) orders FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
-    JOIN (SELECT project_id, SUM(issued_count) capacity, SUM(remaining_count) remaining FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
+      SUM(CASE WHEN is_complimentary = 0 THEN COALESCE(source_order_count, 0) ELSE 0 END) orders FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
+    LEFT JOIN (SELECT project_id, SUM(issued_count) capacity, SUM(remaining_count) remaining FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
     WHERE p.id = ?
   `).get(id);
   if (!show) return null;
@@ -54,14 +56,13 @@ export function getShowDetail(db, id) {
         SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) tickets
       FROM order_detail WHERE project_id = ? GROUP BY order_date
     ), media AS (
-      SELECT metric_date day, xiaohongshu_notes, douyin_likes, wechat_posts, external_comments
+      SELECT metric_date day,
+        wechat_content_count + xiaohongshu_content_count + weibo_content_count + video_content_count + douyin_content_count media_volume
       FROM media_daily WHERE project_id = ?
     )
     SELECT dates.day date, COALESCE(sales.revenue, 0) revenue,
       SUM(COALESCE(sales.revenue, 0)) OVER (ORDER BY dates.day) cumulativeRevenue,
-      COALESCE(sales.tickets, 0) tickets, COALESCE(media.xiaohongshu_notes, 0) xiaohongshuNotes,
-      COALESCE(media.douyin_likes, 0) douyinLikes, COALESCE(media.wechat_posts, 0) wechatPosts,
-      COALESCE(media.external_comments, 0) externalComments
+      COALESCE(sales.tickets, 0) tickets, media.media_volume mediaVolume
     FROM dates LEFT JOIN sales ON sales.day = dates.day LEFT JOIN media ON media.day = dates.day
   `).all(id, id, id, id, id, id);
 

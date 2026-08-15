@@ -4,7 +4,7 @@ export function getChannelReview(db, query) {
   const range = resolveDateRange(db, query);
   const unions = channels.map(([name, column]) => `
     SELECT '${name}' channel, SUM(o.${column}) revenue,
-      SUM(CASE WHEN o.${column} > 0 THEN 1 ELSE 0 END) orders,
+      SUM(CASE WHEN o.${column} > 0 THEN COALESCE(o.source_order_count, 0) ELSE 0 END) orders,
       COUNT(DISTINCT CASE WHEN o.${column} > 0 THEN o.project_id END) showCount
     FROM order_detail o JOIN project_ledger p ON p.id = o.project_id
     WHERE o.order_date BETWEEN ? AND ? ${query.type ? 'AND p.performance_type = ?' : ''}

@@ -273,6 +273,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .platform-pills { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid #94a58b; border-radius: 18px; background: #e9ece4; }
 .platform-pills button { min-height: 27px; padding: 0 9px; border: 0; border-radius: 15px; color: #718071; background: transparent; font-size: 9px; cursor: pointer; transition: .18s; }
 .platform-pills button.active { color: #f5f6f1; background: #183525; }
+.chart-open-button { position: relative; width: 29px; height: 29px; display: inline-grid; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #718071; background: transparent; cursor: pointer; transition: color .18s, background .18s; }
+.chart-open-button:hover { color: #183525; background: #e6eae1; }
+.chart-open-button::after { content: attr(data-tooltip); position: absolute; top: calc(100% + 5px); right: 0; z-index: 5; padding: 4px 7px; color: #fff; background: #183525; border-radius: 6px; font-size: 8px; white-space: nowrap; opacity: 0; pointer-events: none; transform: translateY(-2px); transition: opacity .15s, transform .15s; }
+.chart-open-button:hover::after, .chart-open-button:focus-visible::after { opacity: 1; transform: translateY(0); }
+.secondary-back-button { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 13px; color: #183525; background: transparent; border: 1px solid rgba(24,53,37,.3); border-radius: 18px; font-size: 10px; font-weight: 700; cursor: pointer; transition: background .18s, transform .18s; }
+.secondary-back-button:hover { background: #e7ebe2; transform: translateX(-2px); }
+.trend-detail-chart-panel { margin-bottom: 14px; }
+.trend-detail-chart-panel .panel-body { padding: 18px 22px 22px; }
+.trend-detail-table-wrap { max-height: 620px; overflow: auto; }
+.trend-detail-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.trend-detail-table th { position: sticky; top: 0; z-index: 2; padding: 12px 20px; color: #718071; background: #f9faf6; border-bottom: 1px solid rgba(24,53,37,.22); font-size: 9px; font-weight: 700; text-align: left; }
+.trend-detail-table td { height: 57px; padding: 10px 20px; color: #526353; border-bottom: 1px solid rgba(24,53,37,.1); }
+.trend-detail-table tbody tr:hover { background: #eef0e9; }
+.trend-detail-table td:first-child strong, .trend-detail-table td:first-child small { display: block; }
+.trend-detail-table td:first-child strong { color: #183525; font-size: 11px; }
+.trend-detail-table td:first-child small { margin-top: 3px; color: #8a9788; font: 8px/1 ui-monospace, monospace; }
+.trend-detail-table td b { margin-right: 4px; color: #183525; font: 700 13px/1 ui-monospace, monospace; }
+.trend-detail-table td span { color: #879486; font-size: 8px; }
+.trend-detail-table td em { color: #8a9788; font-size: 9px; font-style: normal; }
 
 .alert-count { color: #8f493f; background: #ead8d3; }
 .alert-list button { border: 1px solid rgba(24,53,37,.22); border-radius: 24px 24px 24px 7px; color: #183525; background: #eef0e9; transition: transform .2s, background .2s; }
@@ -447,6 +466,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .pulse-visual { padding: 24px 4px 6px; }
   .trend-actions { max-width: 100%; overflow-x: auto; }
   .platform-pills button { white-space: nowrap; }
+  .trend-detail-chart-panel .panel-body { padding-inline: 8px; }
+  .trend-detail-table { min-width: 720px; }
   .panel { border-radius: 24px 24px 24px 7px; }
   .completion-ranking button { grid-template-columns: 24px minmax(100px, 1fr) 48px; }
   .completion-bar { display: none; }
