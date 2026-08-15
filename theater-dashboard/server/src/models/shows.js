@@ -7,7 +7,7 @@ export function listShows(db, query = {}) {
   if (query.search) { conditions.push('p.project_name LIKE ?'); params.push(`%${query.search}%`); }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   return db.prepare(`
-    SELECT p.id, p.project_name name, p.performance_type type, p.show_time showTime,
+    SELECT p.id, p.project_name name, p.show_name title, p.performance_type type, p.show_time showTime,
       p.troupe_name troupe, p.venue, p.douban_score doubanScore,
       ROUND(COALESCE(o.revenue, 0), 0) revenue, COALESCE(o.soldTickets, 0) soldTickets,
       COALESCE(o.workTickets, 0) workTickets, COALESCE(o.totalIssuedTickets, 0) totalIssuedTickets,

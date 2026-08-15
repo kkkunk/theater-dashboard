@@ -16,3 +16,21 @@ export function dateTimeLabel(value: string) {
   const date = new Date(value.replace(' ', 'T'));
   return `${date.getMonth() + 1}月${date.getDate()}日 · ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
+
+export function showIdentity(fullName: string, shortName?: string | null) {
+  const title = shortName?.trim() || fullName.trim();
+  if (!fullName || fullName.trim() === title) return { title, subtitle: '' };
+
+  let subtitle = fullName.replace(title, ' ');
+  if (subtitle === fullName) {
+    const bracketedTitle = title.match(/《[^》]+》/)?.[0];
+    if (bracketedTitle && fullName.includes(bracketedTitle)) {
+      subtitle = fullName.replace(bracketedTitle, ' ');
+      const titlePrefix = title.replace(bracketedTitle, '').trim();
+      if (titlePrefix) subtitle = subtitle.replace(titlePrefix, ' ');
+    }
+  }
+
+  subtitle = subtitle.replace(/\s+/g, ' ').trim();
+  return { title, subtitle: subtitle === title ? '' : subtitle };
+}

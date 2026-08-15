@@ -200,7 +200,7 @@ export function getMediaPlatforms(db, query) {
 
 export function getShowCards(db) {
   return db.prepare(`
-    SELECT p.id, p.project_name name, p.performance_type type, p.show_time showTime,
+    SELECT p.id, p.project_name name, p.show_name title, p.performance_type type, p.show_time showTime,
       p.venue, ROUND(COALESCE(o.total_face_amount, 0), 0) revenue,
       COALESCE(o.sold_tickets, 0) soldTickets, COALESCE(o.work_tickets, 0) workTickets,
       COALESCE(o.total_issued_tickets, 0) totalIssuedTickets,

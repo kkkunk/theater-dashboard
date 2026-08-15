@@ -27,7 +27,7 @@ export type Operations = {
   }>;
 };
 export type ShowCard = {
-  id: number; name: string; type: string; showTime: string; venue: string;
+  id: number; name: string; title: string | null; type: string; showTime: string; venue: string;
   revenue: number; soldTickets: number; workTickets: number; totalIssuedTickets: number;
   capacity: number | null; saleableTickets: number | null; occupancyRate: number | null; mediaVolume: number;
   expectedTickets: number | null; salesCompletionRate: number | null;
@@ -41,7 +41,7 @@ export type StrategyEvent = {
 };
 export type ShowDetail = {
   show: Record<string, string | number | null> & {
-    id: number; project_name: string; troupe_name: string; director: string; lead_actor: string;
+    id: number; project_name: string; show_name: string | null; troupe_name: string; director: string; lead_actor: string;
     performance_type: string; show_time: string; venue: string; douban_score: number | null;
     revenue: number; soldTickets: number; workTickets: number; totalIssuedTickets: number;
     capacity: number | null; saleableTickets: number | null; occupancyRate: number | null;

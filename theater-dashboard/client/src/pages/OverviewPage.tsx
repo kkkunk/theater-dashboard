@@ -11,9 +11,10 @@ import { PerformancePulse } from '../components/PerformancePulse';
 import { Panel } from '../components/Panel';
 import { Chart, chartGrid, chartText, tooltip } from '../components/Chart';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
-import { dateTimeLabel, formatCurrency, formatNumber, shortDate } from '../utils/format';
+import { dateTimeLabel, formatCurrency, formatNumber, shortDate, showIdentity } from '../utils/format';
 
-const analysisPeriodOptions = [30, 60, 90, 365] as const;
+const analysisDays = 30;
+const trendDays = 365;
 const platformOptions = [{ value: 'all', label: '综合' }, { value: 'xiaohongshu', label: '小红书' }, { value: 'douyin', label: '抖音' }, { value: 'wechat', label: '公众号' }, { value: 'weibo', label: '微博' }, { value: 'video', label: '视频号' }] as const;
 const grainOptions = [{ value: 'day', label: '日' }, { value: 'week', label: '周' }, { value: 'month', label: '月' }] as const;
 const typeColors: Record<string, string> = { 音乐剧: '#183525', 戏剧: '#60755f', 舞剧: '#94a58b', 儿童剧: '#b5c7a7', 音乐会: '#496850', 戏曲: '#7f9076', 综艺: '#a5b59a' };
@@ -23,7 +24,6 @@ export function OverviewPage() {
   const { openAgent } = useShell();
   const { navigate } = useRouter();
   const [summaryDays, setSummaryDays] = useState<180 | 365>(365);
-  const [analysisDays, setAnalysisDays] = useState<(typeof analysisPeriodOptions)[number]>(30);
   const [platform, setPlatform] = useState<(typeof platformOptions)[number]['value']>('all');
   const [grain, setGrain] = useState<(typeof grainOptions)[number]['value']>('day');
   const [salesMetric, setSalesMetric] = useState<'tickets' | 'revenue'>('tickets');
@@ -31,7 +31,7 @@ export function OverviewPage() {
   const analysisSuffix = `?days=${analysisDays}`;
   const summary = useQuery({ queryKey: ['summary', summaryDays], queryFn: ({ signal }) => apiGet<Summary>(`/api/dashboard/summary?days=${summaryDays}`, signal) });
   const analysisSummary = useQuery({ queryKey: ['analysis-summary', analysisDays], queryFn: ({ signal }) => apiGet<Summary>(`/api/dashboard/summary?days=${analysisDays}`, signal) });
-  const trends = useQuery({ queryKey: ['trends', analysisDays, platform], queryFn: ({ signal }) => apiGet<Trends>(`/api/dashboard/trends${analysisSuffix}&platform=${platform}`, signal) });
+  const trends = useQuery({ queryKey: ['trends', trendDays, platform], queryFn: ({ signal }) => apiGet<Trends>(`/api/dashboard/trends?days=${trendDays}&platform=${platform}`, signal) });
   const channels = useQuery({ queryKey: ['channels', analysisDays], queryFn: ({ signal }) => apiGet<Channels>(`/api/dashboard/channels${analysisSuffix}`, signal) });
   const mediaPlatforms = useQuery({ queryKey: ['media-platforms', analysisDays], queryFn: ({ signal }) => apiGet<MediaPlatforms>(`/api/dashboard/media-platforms${analysisSuffix}`, signal) });
   const operations = useQuery({ queryKey: ['operations', analysisDays, grain], queryFn: ({ signal }) => apiGet<Operations>(`/api/dashboard/operations${analysisSuffix}&grain=${grain}`, signal) });
@@ -80,13 +80,13 @@ export function OverviewPage() {
   const metricLoading = summary.isLoading || analysisSummary.isLoading;
   return <div className="page overview-page">
     <PageHeader eyebrow="THEATER INTELLIGENCE" title="营销数据看板" description="把宣发声量、会员数据与票房结果连成一张可行动的信息图。" onOpenAgent={openAgent} />
-    <div className="project-search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索项目，直达单场分析" aria-label="搜索项目" />{search && <div className="project-search-results">{shows.data?.filter((show) => show.name.includes(search)).slice(0, 6).map((show) => <button key={show.id} onClick={() => navigate(`/shows/${show.id}`)}><span><strong>{show.name}</strong><small>{dateTimeLabel(show.showTime)}</small></span><ArrowRight size={15} /></button>)}{!shows.data?.some((show) => show.name.includes(search)) && <p>没有匹配项目</p>}</div>}</div>
+    <div className="project-search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索项目，直达单场分析" aria-label="搜索项目" />{search && <div className="project-search-results">{shows.data?.filter((show) => `${show.title || ''}${show.name}`.includes(search)).slice(0, 6).map((show) => { const identity = showIdentity(show.name, show.title); return <button key={show.id} onClick={() => navigate(`/shows/${show.id}`)}><span><strong>{identity.title}</strong>{identity.subtitle && <small>{identity.subtitle}</small>}<em>{dateTimeLabel(show.showTime)}</em></span><ArrowRight size={15} /></button>; })}{!shows.data?.some((show) => `${show.title || ''}${show.name}`.includes(search)) && <p>没有匹配项目</p>}</div>}</div>
 
     {metricLoading ? <LoadingState /> : summary.error || analysisSummary.error ? <ErrorState message={(summary.error || analysisSummary.error)?.message || '数据加载失败'} onRetry={() => { summary.refetch(); analysisSummary.refetch(); }} /> : summary.data && analysisSummary.data && <PerformancePulse summary={summary.data} mediaSummary={analysisSummary.data} scopeDays={summaryDays} onScopeChange={setSummaryDays} />}
 
     <div className="overview-primary-grid">
-      <Panel title="票房与媒体声量" eyebrow={`最近${analysisDays === 365 ? '一年' : `${analysisDays}日`}趋势`} action={<div className="trend-actions"><div className="segmented compact-segmented trend-period" aria-label="趋势统计周期">{analysisPeriodOptions.map((period) => <button key={period} aria-pressed={analysisDays === period} className={analysisDays === period ? 'active' : ''} onClick={() => setAnalysisDays(period)}>{period === 365 ? '1年' : `${period}天`}</button>)}</div><div className="platform-pills" aria-label="媒体平台">{platformOptions.map((item) => <button key={item.value} aria-pressed={platform === item.value} className={platform === item.value ? 'active' : ''} onClick={() => setPlatform(item.value)}>{item.label}</button>)}</div><button className="chart-open-button" aria-label="展开票房与媒体声量表" data-tooltip="展开" onClick={() => navigate('/trends')}><Maximize2 size={15} /></button></div>}>
-        {trends.isLoading ? <LoadingState /> : trends.error ? <ErrorState message={trends.error.message} onRetry={() => trends.refetch()} /> : trends.data?.rows.length ? <Chart option={trendOption} height={330} ariaLabel={`最近${analysisDays === 365 ? '一年' : `${analysisDays}日`}票房和媒体声量双轴趋势图`} /> : <EmptyState />}
+      <Panel title="票房与媒体声量" eyebrow="365日联动趋势" action={<div className="trend-actions"><div className="platform-pills" aria-label="媒体平台">{platformOptions.map((item) => <button key={item.value} aria-pressed={platform === item.value} className={platform === item.value ? 'active' : ''} onClick={() => setPlatform(item.value)}>{item.label}</button>)}</div><button className="chart-open-button" aria-label="展开票房与媒体声量表" data-tooltip="展开" onClick={() => navigate('/trends')}><Maximize2 size={15} /></button></div>}>
+        {trends.isLoading ? <LoadingState /> : trends.error ? <ErrorState message={trends.error.message} onRetry={() => trends.refetch()} /> : trends.data?.rows.length ? <Chart option={trendOption} height={330} ariaLabel="365日票房和媒体声量双轴趋势图" /> : <EmptyState />}
       </Panel>
       <Panel title="异常雷达" eyebrow="优先处理" action={<span className="alert-count">{alerts.data?.length || 0} 项</span>} className="alerts-panel">
         {alerts.isLoading ? <LoadingState compact /> : alerts.error ? <ErrorState message={alerts.error.message} /> : alerts.data?.length ? <div className="alert-list">{alerts.data.map((alert) => <button className={`alert-${alert.level}`} key={`${alert.projectId}-${alert.type}`} onClick={() => navigate(`/shows/${alert.projectId}`)}>
@@ -104,9 +104,9 @@ export function OverviewPage() {
         {channels.isLoading ? <LoadingState /> : channels.data?.rows.length ? <Chart option={channelOption} height={280} ariaLabel="渠道票房贡献环形图" /> : <EmptyState />}
       </Panel>
       <Panel title="售票完成率排行" eyebrow="实际售票 / 预计售票" action={<span className="subtle-chip"><Target size={13} />目标进度</span>}>
-        {shows.isLoading ? <LoadingState /> : shows.data?.length ? <div className="completion-ranking">{[...shows.data].sort((a, b) => (b.salesCompletionRate ?? -1) - (a.salesCompletionRate ?? -1)).slice(0, 6).map((show, index) => <button key={show.id} onClick={() => navigate(`/shows/${show.id}`)}>
-          <span className="completion-rank">{String(index + 1).padStart(2, '0')}</span><span className="completion-name"><strong>{show.name}</strong><small>{show.expectedTickets ? `${formatNumber(show.soldTickets)} / ${formatNumber(show.expectedTickets)} 张` : `${formatNumber(show.soldTickets)} 张 · 目标待补`}</small></span><span className="completion-bar"><i style={{ width: `${Math.min(show.salesCompletionRate ?? 0, 100)}%` }} /></span><b>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</b>
-        </button>)}</div> : <EmptyState />}
+        {shows.isLoading ? <LoadingState /> : shows.data?.length ? <div className="completion-ranking">{[...shows.data].sort((a, b) => (b.salesCompletionRate ?? -1) - (a.salesCompletionRate ?? -1)).slice(0, 6).map((show, index) => { const identity = showIdentity(show.name, show.title); return <button key={show.id} onClick={() => navigate(`/shows/${show.id}`)}>
+          <span className="completion-rank">{String(index + 1).padStart(2, '0')}</span><span className="completion-name"><strong>{identity.title}</strong><small>{show.expectedTickets ? `${formatNumber(show.soldTickets)} / ${formatNumber(show.expectedTickets)} 张` : `${formatNumber(show.soldTickets)} 张 · 目标待补`}</small></span><span className="completion-bar"><i style={{ width: `${Math.min(show.salesCompletionRate ?? 0, 100)}%` }} /></span><b>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</b>
+        </button>; })}</div> : <EmptyState />}
       </Panel>
     </div>
 
@@ -117,10 +117,11 @@ export function OverviewPage() {
     <Panel title="近期演出" eyebrow="按演出日期排列" action={<span className="range-note"><Ticket size={14} />{shows.data?.length || 0} 个项目</span>} className="shows-panel">
       {shows.isLoading ? <LoadingState /> : shows.error ? <ErrorState message={shows.error.message} /> : <div className="show-card-row">{shows.data?.map((show, index) => {
         const pending = show.salesCompletionRate == null; const risk = show.salesCompletionRate != null && show.salesCompletionRate < 60; const attention = show.salesCompletionRate != null && show.salesCompletionRate < 80;
+        const identity = showIdentity(show.name, show.title);
         return <motion.button key={show.id} className="show-card" onClick={() => navigate(`/shows/${show.id}`)} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * .025 }}>
           <div className="show-card-accent" style={{ background: typeColors[show.type] || '#62a8ff' }} />
           <div className="show-card-top"><span style={{ color: typeColors[show.type] || '#62a8ff' }}>{show.type}</span><em className={pending ? 'pending' : risk ? 'risk' : attention ? 'attention' : 'healthy'}>{pending ? '目标待补' : risk ? '风险' : attention ? '关注' : '健康'}</em></div>
-          <strong>{show.name}</strong><small>{dateTimeLabel(show.showTime)} · {show.venue}</small>
+          <strong>{identity.title}</strong>{identity.subtitle && <small className="show-card-subtitle">{identity.subtitle}</small>}<small className="show-card-date">{dateTimeLabel(show.showTime)} · {show.venue}</small>
           <div className="progress-head"><span>目标进度</span><b>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</b></div><div className="progress"><i style={{ width: `${Math.min(show.salesCompletionRate ?? 0, 100)}%`, background: risk ? '#a95d50' : attention ? '#9a7642' : '#183525' }} /></div>
           <div className="show-card-foot"><span>总出票 {formatNumber(show.totalIssuedTickets)} · 工作票 {formatNumber(show.workTickets)}</span><span>宣传量 {formatNumber(show.mediaVolume)}</span></div>
         </motion.button>;

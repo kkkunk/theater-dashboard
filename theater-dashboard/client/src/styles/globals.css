@@ -211,8 +211,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .project-search-results { position: absolute; top: 50px; left: 0; right: 0; overflow: hidden; padding: 6px; background: #fff; border: 1px solid #a9c8d9; border-radius: 18px; box-shadow: 0 16px 38px rgba(24,53,37,.14); }
 .project-search-results button { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 10px 12px; color: #183525; text-align: left; background: transparent; border: 0; border-radius: 12px; cursor: pointer; }
 .project-search-results button:hover { background: #eef5f8; }
-.project-search-results span strong, .project-search-results span small { display: block; }
+.project-search-results span strong, .project-search-results span small, .project-search-results span em { display: block; }
 .project-search-results span small { margin-top: 3px; color: #718071; font-size: 9px; }
+.project-search-results span em { margin-top: 4px; color: #9aa69a; font: 8px/1.2 ui-monospace, monospace; font-style: normal; }
 .project-search-results p { margin: 10px; color: #718071; font-size: 11px; }
 .primary-button { height: 42px; padding-inline: 18px; color: #f5f6f1; background: #183525; border: 1.5px solid #183525; border-radius: 24px; box-shadow: none; }
 .primary-button:hover { color: #183525; background: #b9d9b8; transform: translateY(-2px); }
@@ -273,8 +274,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .subtle-chip { color: #183525; background: #dfe7da; border-radius: 20px; }
 .text-link, .text-button { color: #183525; font-weight: 700; }
 .trend-actions { display: flex; align-items: center; gap: 10px; }
-.trend-period { flex: 0 0 auto; }
-.trend-period button { min-width: 42px; }
 .platform-pills { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid #94a58b; border-radius: 18px; background: #e9ece4; }
 .platform-pills button { min-height: 27px; padding: 0 9px; border: 0; border-radius: 15px; color: #718071; background: transparent; font-size: 9px; cursor: pointer; transition: .18s; }
 .platform-pills button.active { color: #f5f6f1; background: #183525; }
@@ -314,8 +313,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .show-card { min-height: 196px; padding: 17px; color: #183525; background: #eef0e9; border: 1px solid rgba(24,53,37,.32); border-radius: 26px 26px 26px 8px; }
 .show-card:hover { color: #f5f6f1; background: #183525; border-color: #183525; transform: translateY(-5px); }
 .show-card-accent { inset: auto 17px 14px; width: auto; height: 4px; border-radius: 4px; }
-.show-card > strong { color: inherit; font-size: 14px; }
+.show-card > strong { height: auto; color: inherit; font-size: 15px; line-height: 1.35; }
 .show-card > small, .progress-head { color: #718071; }
+.show-card > .show-card-subtitle { min-height: 25px; margin-top: 5px; white-space: normal; line-height: 1.4; }
+.show-card > .show-card-date { margin-top: 5px; font-family: ui-monospace, monospace; }
 .show-card:hover > small, .show-card:hover .progress-head, .show-card:hover .show-card-foot { color: #bdc9bb; }
 .show-card-foot { color: #526353; }
 .show-card-top em.pending { color: #245e86; background: #dfeef5; }
@@ -361,6 +362,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .show-score, .hero-metric { border-color: rgba(24,53,37,.2); }
 .show-score strong, .hero-metric > strong, .review-summary article > strong, .period-grid article > strong { color: #183525; }
 .show-score, .type-kicker, .positive-text { color: #60755f; }
+.show-subtitle { margin: -7px 0 13px; color: #526353; font-size: 11px; line-height: 1.55; }
 .show-meta span, .show-score span, .hero-metric > span, .hero-metric > small, .period-grid article > span, .period-grid article > small, .review-summary article > span, .review-summary article > small { color: #718071; }
 .show-select, .filter-select { color: #718071; background: #e9ece4; border: 1px solid #94a58b; border-radius: 22px; }
 .show-select select, .filter-select select { color: #183525; }
