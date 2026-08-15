@@ -51,6 +51,8 @@ export function initDb(database = getDb()) {
       performance_type TEXT,
       show_time TEXT NOT NULL,
       promotion_start_date TEXT,
+      issuable_ticket_count INTEGER,
+      saleable_ticket_count INTEGER,
       wechat_promo_count INTEGER DEFAULT 0,
       xiaohongshu_notes INTEGER DEFAULT 0,
       douyin_likes INTEGER DEFAULT 0,
@@ -136,7 +138,8 @@ export function initDb(database = getDb()) {
       small_ticket_revenue REAL DEFAULT 0,
       organizer_revenue REAL DEFAULT 0,
       other_revenue REAL DEFAULT 0,
-      is_complimentary INTEGER DEFAULT 0,
+      is_complimentary INTEGER DEFAULT 0, -- 旧版兼容字段；新统计以 is_work_ticket 为准
+      is_work_ticket INTEGER DEFAULT 0,
       musical_fan INTEGER DEFAULT 0,
       drama_fan INTEGER DEFAULT 0,
       dance_fan INTEGER DEFAULT 0,
@@ -224,11 +227,14 @@ export function initDb(database = getDb()) {
   // Non-destructive migrations for databases created by v0.1.
   ensureColumn(database, 'project_ledger', 'promotion_start_date TEXT');
   ensureColumn(database, 'project_ledger', 'expected_ticket_count INTEGER DEFAULT 0');
+  ensureColumn(database, 'project_ledger', 'issuable_ticket_count INTEGER');
+  ensureColumn(database, 'project_ledger', 'saleable_ticket_count INTEGER');
   ensureColumn(database, 'media_daily', 'follower_growth INTEGER DEFAULT 0');
   ensureColumn(database, 'order_detail', 'order_date TEXT');
   ensureColumn(database, 'order_detail', 'tier_level TEXT');
   ensureColumn(database, 'order_detail', 'other_revenue REAL DEFAULT 0');
   ensureColumn(database, 'order_detail', 'is_complimentary INTEGER DEFAULT 0');
+  ensureColumn(database, 'order_detail', 'is_work_ticket INTEGER DEFAULT 0');
   ensureColumn(database, 'project_ledger', 'target_revenue REAL');
   ensureColumn(database, 'project_ledger', 'ticket_source_file TEXT');
   ensureColumn(database, 'project_ledger', 'media_source_file TEXT');

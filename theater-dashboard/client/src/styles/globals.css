@@ -333,7 +333,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .compact-segmented button { min-width: 36px; height: 27px; }
 .operations-table-wrap { max-height: 360px; overflow: auto; }
 .operations-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
-.operations-table th, .operations-table td { width: 20%; }
+.operations-table th, .operations-table td { width: 16.666%; }
 .operations-table th { position: sticky; top: 0; z-index: 1; padding: 11px 18px; color: #718071; background: #f9faf6; border-bottom: 1px solid rgba(24,53,37,.22); font-size: 9px; font-weight: 700; text-align: left; }
 .operations-table th svg { margin-right: 6px; vertical-align: -2px; }
 .operations-table th.sales-switch-cell { min-width: 0; }

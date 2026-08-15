@@ -26,17 +26,17 @@ const insertProject = db.prepare(`
   INSERT INTO project_ledger (
     project_name, standard_project_name, troupe_name, director, lead_actor,
     performance_subtype, theater_name, venue, show_name, performance_type,
-    show_time, promotion_start_date, expected_ticket_count,
+    show_time, promotion_start_date, expected_ticket_count, issuable_ticket_count, saleable_ticket_count,
     forecast_retail_revenue, ticket_source_file, media_source_file
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const insertOrder = db.prepare(`
   INSERT INTO order_detail (
     order_no, project_id, show_time, order_date, phone, tier_level,
-    total_tickets, total_face_amount, is_complimentary,
+    total_tickets, total_face_amount, is_complimentary, is_work_ticket,
     organizer_revenue, damai_revenue, other_revenue, source_order_count
-  ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const insertMedia = db.prepare(`
@@ -89,6 +89,8 @@ db.transaction(() => {
       project.showTime,
       project.openingDate,
       project.expectedTickets ?? null,
+      project.issuableTickets ?? null,
+      project.saleableTickets ?? null,
       project.estimatedRevenue ?? null,
       project.ticketSource,
       project.mediaSource,
@@ -106,6 +108,7 @@ db.transaction(() => {
         group.date,
         group.tickets,
         revenue,
+        group.complimentary ? 1 : 0,
         group.complimentary ? 1 : 0,
         ...channelRevenue,
         group.sourceOrders ?? group.orders ?? null,

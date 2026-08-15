@@ -5,8 +5,8 @@ function periodMetrics(db, start, end) {
     WITH active_projects AS (
       SELECT DISTINCT project_id FROM order_detail WHERE order_date BETWEEN ? AND ?
     ), capacity AS (
-      SELECT SUM(issued_count) value FROM ticket_price
-      WHERE project_id IN (SELECT project_id FROM active_projects)
+      SELECT SUM(issuable_ticket_count) value FROM project_ledger
+      WHERE id IN (SELECT project_id FROM active_projects) AND issuable_ticket_count IS NOT NULL
     ), target AS (
       SELECT SUM(expected_ticket_count) value FROM project_ledger
       WHERE id IN (SELECT project_id FROM active_projects) AND expected_ticket_count IS NOT NULL
@@ -15,7 +15,7 @@ function periodMetrics(db, start, end) {
       WHERE id IN (SELECT project_id FROM active_projects) AND COALESCE(forecast_retail_revenue, target_revenue) IS NOT NULL
     ), targeted_actuals AS (
       SELECT
-        SUM(CASE WHEN p.expected_ticket_count IS NOT NULL AND o.is_complimentary = 0 THEN o.total_tickets ELSE 0 END) sold_tickets,
+        SUM(CASE WHEN p.expected_ticket_count IS NOT NULL AND o.is_work_ticket = 0 THEN o.total_tickets ELSE 0 END) sold_tickets,
         SUM(CASE WHEN COALESCE(p.forecast_retail_revenue, p.target_revenue) IS NOT NULL THEN o.total_face_amount ELSE 0 END) revenue
       FROM order_detail o
       JOIN project_ledger p ON p.id = o.project_id
@@ -23,9 +23,10 @@ function periodMetrics(db, start, end) {
     )
     SELECT
       COALESCE(SUM(o.total_face_amount), 0) AS revenue,
-      COALESCE(SUM(CASE WHEN o.is_complimentary = 0 THEN o.total_tickets ELSE 0 END), 0) AS sold_tickets,
-      COALESCE(SUM(CASE WHEN o.is_complimentary = 1 THEN o.total_tickets ELSE 0 END), 0) AS complimentary_tickets,
-      SUM(CASE WHEN o.is_complimentary = 0 THEN COALESCE(o.source_order_count, 0) ELSE 0 END) AS orders,
+      COALESCE(SUM(CASE WHEN o.is_work_ticket = 0 THEN o.total_tickets ELSE 0 END), 0) AS sold_tickets,
+      COALESCE(SUM(CASE WHEN o.is_work_ticket = 1 THEN o.total_tickets ELSE 0 END), 0) AS work_tickets,
+      COALESCE(SUM(o.total_tickets), 0) AS total_issued_tickets,
+      SUM(CASE WHEN o.is_work_ticket = 0 THEN COALESCE(o.source_order_count, 0) ELSE 0 END) AS orders,
       (SELECT value FROM capacity) AS capacity,
       (SELECT value FROM target) AS expected_tickets,
       (SELECT value FROM revenue_target) AS estimated_revenue,
@@ -66,15 +67,16 @@ export function getSummary(db, query) {
     WHERE is_placeholder = 0 AND period_end >= ? AND period_start <= ?
   `).get(range.start, range.end);
 
-  const occupancy = current.capacity ? current.sold_tickets / current.capacity * 100 : 0;
-  const previousOccupancy = previous.capacity ? previous.sold_tickets / previous.capacity * 100 : 0;
+  const occupancy = current.capacity ? current.total_issued_tickets / current.capacity * 100 : 0;
+  const previousOccupancy = previous.capacity ? previous.total_issued_tickets / previous.capacity * 100 : 0;
   const completion = current.expected_tickets ? current.targeted_sold_tickets / current.expected_tickets * 100 : 0;
   const previousCompletion = previous.expected_tickets ? previous.targeted_sold_tickets / previous.expected_tickets * 100 : 0;
   return {
     range,
     metrics: {
       totalRevenue: { value: round(current.revenue, 0), changePct: change(current.revenue, previous.revenue) },
-      complimentaryTickets: { value: current.complimentary_tickets, changePct: null },
+      workTickets: { value: current.work_tickets, changePct: null },
+      totalIssuedTickets: { value: current.total_issued_tickets, changePct: change(current.total_issued_tickets, previous.total_issued_tickets) },
       occupancyRate: { value: round(occupancy, 1), changePct: current.capacity && previous.capacity ? round(occupancy - previousOccupancy, 1) : null, available: Boolean(current.capacity), unit: 'percentage_point' },
       salesCompletionRate: { value: round(completion, 1), changePct: current.expected_tickets && previous.expected_tickets ? round(completion - previousCompletion, 1) : null, available: Boolean(current.expected_tickets), unit: 'percentage_point' },
       boxOfficeCompletionRate: { value: current.estimated_revenue ? round(current.targeted_revenue / current.estimated_revenue * 100, 1) : 0, changePct: null, available: Boolean(current.estimated_revenue), unit: 'percentage_point' },
@@ -98,8 +100,9 @@ export function getOperations(db, query) {
       SELECT ? UNION ALL SELECT date(day, '+1 day') FROM dates WHERE day < ?
     ), sales AS (
       SELECT order_date day,
-        SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) tickets,
-        SUM(CASE WHEN is_complimentary = 1 THEN total_tickets ELSE 0 END) complimentary_tickets,
+        SUM(CASE WHEN is_work_ticket = 0 THEN total_tickets ELSE 0 END) tickets,
+        SUM(CASE WHEN is_work_ticket = 1 THEN total_tickets ELSE 0 END) work_tickets,
+        SUM(total_tickets) issued_tickets,
         SUM(total_face_amount) revenue
       FROM order_detail WHERE order_date BETWEEN ? AND ? GROUP BY order_date
     ), publicity AS (
@@ -116,7 +119,7 @@ export function getOperations(db, query) {
       FROM member_growth_daily WHERE stat_date BETWEEN ? AND ? GROUP BY stat_date
     ), daily AS (
       SELECT dates.day, COALESCE(sales.tickets, 0) tickets,
-        COALESCE(sales.complimentary_tickets, 0) complimentary_tickets, COALESCE(sales.revenue, 0) revenue,
+        COALESCE(sales.work_tickets, 0) work_tickets, COALESCE(sales.issued_tickets, 0) issued_tickets, COALESCE(sales.revenue, 0) revenue,
         publicity.volume publicity,
         summary_growth.follower_growth follower_growth,
         COALESCE(members.new_members, 0) members
@@ -128,7 +131,8 @@ export function getOperations(db, query) {
     )
     SELECT ${groupExpression} periodStart, MAX(dates.day) periodEnd,
       SUM(daily.tickets) totalTickets,
-      SUM(daily.complimentary_tickets) complimentaryTickets,
+      SUM(daily.work_tickets) workTickets,
+      SUM(daily.issued_tickets) totalIssuedTickets,
       ROUND(SUM(daily.revenue), 0) totalRevenue,
       ROUND(SUM(daily.publicity), 0) totalPublicity,
       SUM(daily.follower_growth) mediaFollowerGrowth
@@ -151,8 +155,8 @@ export function getTrends(db, query) {
       SELECT ? UNION ALL SELECT date(day, '+1 day') FROM dates WHERE day < ?
     ), sales AS (
       SELECT order_date day, SUM(total_face_amount) revenue,
-        SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) tickets,
-        SUM(CASE WHEN is_complimentary = 0 THEN COALESCE(source_order_count, 0) ELSE 0 END) orders
+        SUM(CASE WHEN is_work_ticket = 0 THEN total_tickets ELSE 0 END) tickets,
+        SUM(CASE WHEN is_work_ticket = 0 THEN COALESCE(source_order_count, 0) ELSE 0 END) orders
       FROM order_detail WHERE order_date BETWEEN ? AND ? GROUP BY order_date
     ), media AS (
       SELECT metric_date day, SUM(${mediaExpression}) volume
@@ -196,19 +200,21 @@ export function getShowCards(db) {
   return db.prepare(`
     SELECT p.id, p.project_name name, p.performance_type type, p.show_time showTime,
       p.venue, ROUND(COALESCE(o.total_face_amount, 0), 0) revenue,
-      COALESCE(o.total_tickets, 0) soldTickets, COALESCE(o.complimentary_tickets, 0) complimentaryTickets, t.issued_count capacity,
-      ROUND(100.0 * COALESCE(o.total_tickets, 0) / NULLIF(t.issued_count, 0), 1) occupancyRate,
+      COALESCE(o.sold_tickets, 0) soldTickets, COALESCE(o.work_tickets, 0) workTickets,
+      COALESCE(o.total_issued_tickets, 0) totalIssuedTickets,
+      p.issuable_ticket_count capacity, p.saleable_ticket_count saleableTickets,
+      ROUND(100.0 * COALESCE(o.total_issued_tickets, 0) / NULLIF(p.issuable_ticket_count, 0), 1) occupancyRate,
       p.expected_ticket_count expectedTickets,
-      ROUND(100.0 * COALESCE(o.total_tickets, 0) / NULLIF(p.expected_ticket_count, 0), 1) salesCompletionRate,
+      ROUND(100.0 * COALESCE(o.sold_tickets, 0) / NULLIF(p.expected_ticket_count, 0), 1) salesCompletionRate,
       COALESCE(p.forecast_retail_revenue, p.target_revenue) estimatedRevenue,
       ROUND(100.0 * COALESCE(o.total_face_amount, 0) / NULLIF(COALESCE(p.forecast_retail_revenue, p.target_revenue), 0), 1) boxOfficeCompletionRate,
       COALESCE(m.media_volume, 0) AS mediaVolume
     FROM project_ledger p
     LEFT JOIN (SELECT project_id, SUM(total_face_amount) total_face_amount,
-      SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) total_tickets,
-      SUM(CASE WHEN is_complimentary = 1 THEN total_tickets ELSE 0 END) complimentary_tickets
+      SUM(CASE WHEN is_work_ticket = 0 THEN total_tickets ELSE 0 END) sold_tickets,
+      SUM(CASE WHEN is_work_ticket = 1 THEN total_tickets ELSE 0 END) work_tickets,
+      SUM(total_tickets) total_issued_tickets
       FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
-    LEFT JOIN (SELECT project_id, SUM(issued_count) issued_count FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
     LEFT JOIN (SELECT project_id, SUM(wechat_content_count + xiaohongshu_content_count + weibo_content_count + video_content_count + douyin_content_count) media_volume FROM media_daily GROUP BY project_id) m ON m.project_id = p.id
     ORDER BY p.show_time
   `).all();
@@ -219,7 +225,7 @@ export function getAlerts(db) {
   const referenceDate = db.prepare('SELECT MAX(metric_date) FROM media_daily').pluck().get() || new Date().toISOString().slice(0, 10);
   return shows.flatMap((show) => {
     const alerts = [];
-    if (show.soldTickets > 0 && show.occupancyRate != null && show.occupancyRate < 60) alerts.push({ projectId: show.id, level: show.occupancyRate < 40 ? 'high' : 'medium', type: 'low_occupancy', message: `${show.name}付费上座率仅 ${show.occupancyRate}%` });
+    if (show.totalIssuedTickets > 0 && show.occupancyRate != null && show.occupancyRate < 60) alerts.push({ projectId: show.id, level: show.occupancyRate < 40 ? 'high' : 'medium', type: 'low_occupancy', message: `${show.name}上座率完成度仅 ${show.occupancyRate}%` });
     if (show.mediaVolume > 700 && show.salesCompletionRate != null && show.salesCompletionRate < 75) alerts.push({ projectId: show.id, level: show.salesCompletionRate < 50 ? 'high' : 'medium', type: 'high_media_low_conversion', message: `${show.name}宣传量较高，但售票完成率仅 ${show.salesCompletionRate}%` });
     const daysToShow = Math.ceil((new Date(show.showTime.slice(0, 10)) - new Date(referenceDate)) / 86400000);
     if (daysToShow >= 0 && daysToShow <= 21) {

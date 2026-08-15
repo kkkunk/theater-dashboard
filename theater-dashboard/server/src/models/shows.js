@@ -9,15 +9,18 @@ export function listShows(db, query = {}) {
   return db.prepare(`
     SELECT p.id, p.project_name name, p.performance_type type, p.show_time showTime,
       p.troupe_name troupe, p.venue, p.douban_score doubanScore,
-      ROUND(COALESCE(o.revenue, 0), 0) revenue, COALESCE(o.soldTickets, 0) soldTickets, t.capacity,
-      ROUND(100.0 * COALESCE(o.soldTickets, 0) / t.capacity, 1) occupancyRate,
+      ROUND(COALESCE(o.revenue, 0), 0) revenue, COALESCE(o.soldTickets, 0) soldTickets,
+      COALESCE(o.workTickets, 0) workTickets, COALESCE(o.totalIssuedTickets, 0) totalIssuedTickets,
+      p.issuable_ticket_count capacity, p.saleable_ticket_count saleableTickets,
+      ROUND(100.0 * COALESCE(o.totalIssuedTickets, 0) / NULLIF(p.issuable_ticket_count, 0), 1) occupancyRate,
       p.expected_ticket_count expectedTickets,
       ROUND(100.0 * COALESCE(o.soldTickets, 0) / NULLIF(p.expected_ticket_count, 0), 1) salesCompletionRate
     FROM project_ledger p
     LEFT JOIN (SELECT project_id, SUM(total_face_amount) revenue,
-      SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) soldTickets
+      SUM(CASE WHEN is_work_ticket = 0 THEN total_tickets ELSE 0 END) soldTickets,
+      SUM(CASE WHEN is_work_ticket = 1 THEN total_tickets ELSE 0 END) workTickets,
+      SUM(total_tickets) totalIssuedTickets
       FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
-    LEFT JOIN (SELECT project_id, SUM(issued_count) capacity FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
     ${where} ORDER BY p.show_time
   `).all(...params);
 }
@@ -25,19 +28,21 @@ export function listShows(db, query = {}) {
 export function getShowDetail(db, id) {
   const show = db.prepare(`
     SELECT p.*,
-      ROUND(o.revenue, 0) revenue, o.sold_tickets soldTickets, o.complimentary_tickets complimentaryTickets, o.orders,
+      ROUND(o.revenue, 0) revenue, o.sold_tickets soldTickets, o.work_tickets workTickets,
+      o.total_issued_tickets totalIssuedTickets, o.orders,
       p.expected_ticket_count expectedTickets,
       CASE WHEN p.expected_ticket_count IS NULL THEN NULL ELSE MAX(p.expected_ticket_count - o.sold_tickets, 0) END remainingGoal,
       ROUND(100.0 * o.sold_tickets / NULLIF(p.expected_ticket_count, 0), 1) salesCompletionRate,
       COALESCE(p.forecast_retail_revenue, p.target_revenue) estimatedRevenue,
       ROUND(100.0 * o.revenue / NULLIF(COALESCE(p.forecast_retail_revenue, p.target_revenue), 0), 1) boxOfficeCompletionRate,
-      t.capacity, t.remaining, ROUND(100.0 * o.sold_tickets / NULLIF(t.capacity, 0), 1) occupancyRate
+      p.issuable_ticket_count capacity, p.saleable_ticket_count saleableTickets,
+      ROUND(100.0 * o.total_issued_tickets / NULLIF(p.issuable_ticket_count, 0), 1) occupancyRate
     FROM project_ledger p
     JOIN (SELECT project_id, SUM(total_face_amount) revenue,
-      SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) sold_tickets,
-      SUM(CASE WHEN is_complimentary = 1 THEN total_tickets ELSE 0 END) complimentary_tickets,
-      SUM(CASE WHEN is_complimentary = 0 THEN COALESCE(source_order_count, 0) ELSE 0 END) orders FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
-    LEFT JOIN (SELECT project_id, SUM(issued_count) capacity, SUM(remaining_count) remaining FROM ticket_price GROUP BY project_id) t ON t.project_id = p.id
+      SUM(CASE WHEN is_work_ticket = 0 THEN total_tickets ELSE 0 END) sold_tickets,
+      SUM(CASE WHEN is_work_ticket = 1 THEN total_tickets ELSE 0 END) work_tickets,
+      SUM(total_tickets) total_issued_tickets,
+      SUM(CASE WHEN is_work_ticket = 0 THEN COALESCE(source_order_count, 0) ELSE 0 END) orders FROM order_detail GROUP BY project_id) o ON o.project_id = p.id
     WHERE p.id = ?
   `).get(id);
   if (!show) return null;
@@ -53,7 +58,7 @@ export function getShowDetail(db, id) {
       END FROM project_ledger WHERE id = ?)
     ), sales AS (
       SELECT order_date day, SUM(total_face_amount) revenue,
-        SUM(CASE WHEN is_complimentary = 0 THEN total_tickets ELSE 0 END) tickets
+        SUM(CASE WHEN is_work_ticket = 0 THEN total_tickets ELSE 0 END) tickets
       FROM order_detail WHERE project_id = ? GROUP BY order_date
     ), media AS (
       SELECT metric_date day,

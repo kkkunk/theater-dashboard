@@ -51,15 +51,18 @@ test('show list and detail expose all analysis sections', async () => {
   assert.ok(detail.body.data.timeline.length > 20);
   assert.equal(detail.body.data.strategyEvents.length, 0);
   assert.equal(detail.body.data.channelBreakdown.length, 3);
-  assert.equal(detail.body.data.show.expectedTickets, null);
-  assert.equal(detail.body.data.show.salesCompletionRate, null);
-  assert.equal(detail.body.data.show.capacity, null);
-  assert.equal(detail.body.data.show.occupancyRate, null);
+  assert.equal(detail.body.data.show.expectedTickets, 1700);
+  assert.equal(detail.body.data.show.salesCompletionRate, 129.8);
+  assert.equal(detail.body.data.show.capacity, 2526);
+  assert.equal(detail.body.data.show.saleableTickets, 2376);
+  assert.equal(detail.body.data.show.workTickets, 176);
+  assert.equal(detail.body.data.show.totalIssuedTickets, 2382);
+  assert.equal(detail.body.data.show.occupancyRate, 94.3);
   assert.equal(detail.body.data.audience, undefined);
   assert.ok(detail.body.data.period);
 });
 
-test('operations master table separates complimentary tickets and aggregates media growth', async () => {
+test('operations master table separates work tickets and exposes total issued tickets', async () => {
   const result = await get('/api/dashboard/operations?days=30&grain=week');
   assert.equal(result.response.status, 200);
   assert.equal(result.body.data.grain, 'week');
@@ -68,7 +71,8 @@ test('operations master table separates complimentary tickets and aggregates med
     assert.equal(typeof row.totalTickets, 'number');
     assert.equal(typeof row.totalRevenue, 'number');
     assert.ok(row.totalPublicity == null || typeof row.totalPublicity === 'number');
-    assert.equal(typeof row.complimentaryTickets, 'number');
+    assert.equal(typeof row.workTickets, 'number');
+    assert.equal(row.totalIssuedTickets, row.totalTickets + row.workTickets);
     assert.ok(row.mediaFollowerGrowth == null || typeof row.mediaFollowerGrowth === 'number');
   }
 });
@@ -76,8 +80,9 @@ test('operations master table separates complimentary tickets and aggregates med
 test('completion rates only compare projects that have verified targets', async () => {
   const result = await get('/api/dashboard/summary?days=365');
   assert.equal(result.response.status, 200);
-  assert.equal(result.body.data.metrics.salesCompletionRate.value, 13.6);
-  assert.equal(result.body.data.metrics.boxOfficeCompletionRate.value, 9.6);
+  assert.equal(result.body.data.metrics.salesCompletionRate.value, 98.9);
+  assert.equal(result.body.data.metrics.boxOfficeCompletionRate.value, 97.5);
+  assert.equal(result.body.data.metrics.occupancyRate.value, 112.7);
 });
 
 test('review endpoints return channel and strategy rankings', async () => {
@@ -125,6 +130,7 @@ test('seed contains verified records only and leaves unavailable datasets empty'
   const missingDates = db.prepare('SELECT COUNT(*) FROM order_detail WHERE order_date IS NULL').pluck().get();
   const phoneRows = db.prepare('SELECT COUNT(*) FROM order_detail WHERE phone IS NOT NULL').pluck().get();
   const missingTargets = db.prepare('SELECT COUNT(*) FROM project_ledger WHERE expected_ticket_count IS NULL').pluck().get();
+  const missingCapacities = db.prepare('SELECT COUNT(*) FROM project_ledger WHERE issuable_ticket_count IS NULL').pluck().get();
   const memberDays = db.prepare('SELECT COUNT(*) FROM member_growth_daily').pluck().get();
   const followerSummaries = db.prepare('SELECT COUNT(*) FROM media_platform_summary WHERE start_followers IS NOT NULL AND end_followers IS NOT NULL').pluck().get();
   const emptySyntheticTables = db.prepare(`SELECT
@@ -135,28 +141,46 @@ test('seed contains verified records only and leaves unavailable datasets empty'
   `).get();
   assert.equal(missingDates, 0);
   assert.equal(phoneRows, 0);
-  assert.equal(missingTargets, 6);
+  assert.equal(missingTargets, 0);
+  assert.equal(missingCapacities, 2);
   assert.equal(memberDays, 6);
   assert.equal(followerSummaries, 10);
   assert.deepEqual(emptySyntheticTables, { audiences: 0, strategies: 0, ticketPrices: 0, externalInfo: 0 });
 });
 
-test('completed project totals match the source order workbooks and exclude complimentary tickets', () => {
+test('zero-value tickets are work tickets, excluded from sales and included in total issued tickets', () => {
   const rows = db.prepare(`
     SELECT p.project_name name,
-      SUM(CASE WHEN o.is_complimentary = 0 THEN o.total_tickets ELSE 0 END) paidTickets,
-      SUM(CASE WHEN o.is_complimentary = 1 THEN o.total_tickets ELSE 0 END) complimentaryTickets,
+      SUM(CASE WHEN o.is_work_ticket = 0 THEN o.total_tickets ELSE 0 END) paidTickets,
+      SUM(CASE WHEN o.is_work_ticket = 1 THEN o.total_tickets ELSE 0 END) workTickets,
+      SUM(o.total_tickets) totalIssuedTickets,
       ROUND(SUM(o.total_face_amount), 2) revenue
     FROM project_ledger p JOIN order_detail o ON o.project_id = p.id
     WHERE p.id <= 6 GROUP BY p.id ORDER BY p.id
   `).all();
-  assert.deepEqual(rows.map(({ paidTickets, complimentaryTickets, revenue }) => ({ paidTickets, complimentaryTickets, revenue })), [
-    { paidTickets: 2206, complimentaryTickets: 176, revenue: 1495930.6 },
-    { paidTickets: 2040, complimentaryTickets: 360, revenue: 1106526 },
-    { paidTickets: 1953, complimentaryTickets: 296, revenue: 1252046.15 },
-    { paidTickets: 2907, complimentaryTickets: 575, revenue: 1676518 },
-    { paidTickets: 856, complimentaryTickets: 124, revenue: 215877 },
-    { paidTickets: 931, complimentaryTickets: 91, revenue: 327293 },
+  assert.deepEqual(rows.map(({ paidTickets, workTickets, totalIssuedTickets, revenue }) => ({ paidTickets, workTickets, totalIssuedTickets, revenue })), [
+    { paidTickets: 2206, workTickets: 176, totalIssuedTickets: 2382, revenue: 1495930.6 },
+    { paidTickets: 2040, workTickets: 360, totalIssuedTickets: 2400, revenue: 1106526 },
+    { paidTickets: 1953, workTickets: 296, totalIssuedTickets: 2249, revenue: 1252046.15 },
+    { paidTickets: 2907, workTickets: 575, totalIssuedTickets: 3482, revenue: 1676518 },
+    { paidTickets: 856, workTickets: 124, totalIssuedTickets: 980, revenue: 215877 },
+    { paidTickets: 931, workTickets: 91, totalIssuedTickets: 1022, revenue: 327293 },
+  ]);
+});
+
+test('completed projects expose verified capacity and target values', () => {
+  const rows = db.prepare(`
+    SELECT issuable_ticket_count issuable, saleable_ticket_count saleable,
+      expected_ticket_count expected, forecast_retail_revenue target
+    FROM project_ledger WHERE id <= 6 ORDER BY id
+  `).all();
+  assert.deepEqual(rows, [
+    { issuable: 2526, saleable: 2376, expected: 1700, target: 1200000 },
+    { issuable: 2564, saleable: 2398, expected: 1500, target: 1100000 },
+    { issuable: 2306, saleable: 2122, expected: 1700, target: 1200000 },
+    { issuable: 2564, saleable: 2376, expected: 1920, target: 1350000 },
+    { issuable: 1153, saleable: 912, expected: 600, target: 200000 },
+    { issuable: 1294, saleable: 1254, expected: 1208, target: 410000 },
   ]);
 });
 
