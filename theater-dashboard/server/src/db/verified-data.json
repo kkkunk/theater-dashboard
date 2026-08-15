@@ -7216,9 +7216,9 @@
       "venue": null,
       "ticketSource": "2025.12.12-13《孔雀》.xlsx",
       "mediaSource": "数据表—孔雀（9.19-12.13）.xlsx",
-      "issuableTickets": 2564,
-      "saleableTickets": 2376,
-      "expectedTickets": 1920,
+      "issuableTickets": 3846,
+      "saleableTickets": 3564,
+      "expectedTickets": 2450,
       "estimatedRevenue": 1350000,
       "ticketGroups": [
         {

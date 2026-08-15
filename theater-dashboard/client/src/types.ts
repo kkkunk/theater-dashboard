@@ -47,6 +47,9 @@ export type ShowDetail = {
     capacity: number | null; saleableTickets: number | null; occupancyRate: number | null;
     expectedTickets: number | null; remainingGoal: number | null; salesCompletionRate: number | null;
     estimatedRevenue: number | null; boxOfficeCompletionRate: number | null;
+    dataAsOfDate: string; salesWindowDays: number | null; salesElapsedDays: number | null; daysToShow: number;
+    timeProgressRate: number | null; salesProgressGap: number | null; salesPaceIndex: number | null;
+    salesPaceStatus: 'ahead' | 'on_track' | 'behind' | null;
   };
   timeline: Array<{
     date: string; revenue: number; cumulativeRevenue: number; tickets: number;

@@ -60,6 +60,8 @@ export function ShowDetailPage() {
   const remainingTickets = show.salesCompletionRate == null || show.expectedTickets == null
     ? null
     : show.salesCompletionRate > 100 ? show.soldTickets - show.expectedTickets : show.remainingGoal;
+  const paceLabel = show.salesPaceStatus === 'ahead' ? '领先计划' : show.salesPaceStatus === 'on_track' ? '基本同步' : show.salesPaceStatus === 'behind' ? '落后计划' : '暂无判断';
+  const progressGapLabel = show.salesProgressGap == null ? '暂无数据' : `${show.salesProgressGap > 0 ? '+' : ''}${show.salesProgressGap} 个百分点`;
 
   return <div className="page show-detail-page">
     <button className="back-link" onClick={() => navigate('/')}><ArrowLeft size={15} />返回总览</button>
@@ -82,7 +84,7 @@ export function ShowDetailPage() {
       <Panel title="售票目标完成进度" eyebrow="实际售票 / 预计售票">
         <div className="sales-goal" aria-label={show.salesCompletionRate == null ? '预计售票目标待补' : `售票完成率 ${show.salesCompletionRate}%`}>
           <div className="goal-orbit" style={{ background: `conic-gradient(#183525 ${Math.min(show.salesCompletionRate ?? 0, 100) * 3.6}deg, #dce2d7 0deg)` }}><div><strong>{show.salesCompletionRate == null ? '—' : `${show.salesCompletionRate}%`}</strong><span>{show.salesCompletionRate == null ? '暂无目标' : show.salesCompletionRate > 100 ? `超额 ${Math.round(show.salesCompletionRate - 100)}%` : '当前完成率'}</span></div></div>
-          <div className="goal-ledger"><div><span>预计售票</span><strong>{show.expectedTickets ? formatNumber(show.expectedTickets) : '待补'}{show.expectedTickets ? <small>张</small> : null}</strong></div><div><span>实际付费售票</span><strong>{formatNumber(show.soldTickets)}<small>张</small></strong></div><div><span>可售 / 工作票</span><strong>{show.saleableTickets == null ? '待补' : formatNumber(show.saleableTickets)}<small>{show.saleableTickets == null ? '' : ` 张 / 工作票 ${formatNumber(show.workTickets)} 张`}</small></strong></div><div><span>{show.salesCompletionRate != null && show.salesCompletionRate > 100 ? '超额售票' : '剩余目标'}</span><strong>{remainingTickets == null ? '—' : formatNumber(remainingTickets)}{remainingTickets == null ? null : <small>张</small>}</strong></div></div>
+          <div className="goal-ledger"><div><span>预计售票</span><strong>{show.expectedTickets ? formatNumber(show.expectedTickets) : '待补'}{show.expectedTickets ? <small>张</small> : null}</strong></div><div><span>实际付费售票</span><strong>{formatNumber(show.soldTickets)}<small>张</small></strong></div><div><span>可售 / 工作票</span><strong>{show.saleableTickets == null ? '待补' : formatNumber(show.saleableTickets)}<small>{show.saleableTickets == null ? '' : ` 张 / 工作票 ${formatNumber(show.workTickets)} 张`}</small></strong></div><div><span>{show.salesCompletionRate != null && show.salesCompletionRate > 100 ? '超额售票' : '剩余目标'}</span><strong>{remainingTickets == null ? '—' : formatNumber(remainingTickets)}{remainingTickets == null ? null : <small>张</small>}</strong></div><div className="pace-row"><span>销售时间进度</span><strong>{show.timeProgressRate == null ? '—' : `${show.timeProgressRate}%`}<small>{show.salesElapsedDays == null ? '缺少开票日期' : ` 已开售 ${show.salesElapsedDays} 天 · 距演出 ${show.daysToShow} 天`}</small></strong></div><div className={`pace-row ${show.salesPaceStatus || ''}`}><span>售票节奏</span><strong>{paceLabel}<small>{progressGapLabel}</small></strong></div></div>
         </div>
       </Panel>
     </div>

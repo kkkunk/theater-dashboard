@@ -62,6 +62,17 @@ test('show list and detail expose all analysis sections', async () => {
   assert.ok(detail.body.data.period);
 });
 
+test('active show detail exposes time progress and sales pace', async () => {
+  const detail = await get('/api/shows/7');
+  assert.equal(detail.response.status, 200);
+  assert.equal(detail.body.data.show.dataAsOfDate, '2026-08-13');
+  assert.equal(detail.body.data.show.salesElapsedDays, 5);
+  assert.equal(detail.body.data.show.daysToShow, 24);
+  assert.equal(detail.body.data.show.timeProgressRate, 17.2);
+  assert.equal(detail.body.data.show.salesProgressGap, 4.7);
+  assert.equal(detail.body.data.show.salesPaceStatus, 'ahead');
+});
+
 test('operations master table separates work tickets and exposes total issued tickets', async () => {
   const result = await get('/api/dashboard/operations?days=30&grain=week');
   assert.equal(result.response.status, 200);
@@ -80,9 +91,19 @@ test('operations master table separates work tickets and exposes total issued ti
 test('completion rates only compare projects that have verified targets', async () => {
   const result = await get('/api/dashboard/summary?days=365');
   assert.equal(result.response.status, 200);
-  assert.equal(result.body.data.metrics.salesCompletionRate.value, 98.9);
+  assert.equal(result.body.data.metrics.salesCompletionRate.value, 89.3);
   assert.equal(result.body.data.metrics.boxOfficeCompletionRate.value, 97.5);
-  assert.equal(result.body.data.metrics.occupancyRate.value, 112.7);
+  assert.equal(result.body.data.metrics.occupancyRate.value, 89.7);
+});
+
+test('completion rates use cumulative actuals through the selected end date', async () => {
+  const result = await get('/api/dashboard/summary?start=2025-12-13&end=2025-12-13');
+  assert.equal(result.response.status, 200);
+  assert.equal(result.body.data.metrics.salesCompletionRate.value, 118.7);
+  assert.equal(result.body.data.metrics.boxOfficeCompletionRate.value, 124.2);
+  assert.equal(result.body.data.metrics.occupancyRate.value, 90.5);
+  assert.equal(result.body.data.metrics.workTickets.value, 575);
+  assert.equal(result.body.data.metrics.totalIssuedTickets.value, 3482);
 });
 
 test('review endpoints return channel and strategy rankings', async () => {
@@ -178,7 +199,7 @@ test('completed projects expose verified capacity and target values', () => {
     { issuable: 2526, saleable: 2376, expected: 1700, target: 1200000 },
     { issuable: 2564, saleable: 2398, expected: 1500, target: 1100000 },
     { issuable: 2306, saleable: 2122, expected: 1700, target: 1200000 },
-    { issuable: 2564, saleable: 2376, expected: 1920, target: 1350000 },
+    { issuable: 3846, saleable: 3564, expected: 2450, target: 1350000 },
     { issuable: 1153, saleable: 912, expected: 600, target: 200000 },
     { issuable: 1294, saleable: 1254, expected: 1208, target: 410000 },
   ]);

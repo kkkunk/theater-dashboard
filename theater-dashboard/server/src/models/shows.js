@@ -47,6 +47,38 @@ export function getShowDetail(db, id) {
   `).get(id);
   if (!show) return null;
 
+  const latestProjectDate = db.prepare(`
+    SELECT MAX(value) FROM (
+      SELECT MAX(order_date) value FROM order_detail WHERE project_id = ?
+      UNION ALL SELECT MAX(metric_date) FROM media_daily WHERE project_id = ?
+    )
+  `).pluck().get(id, id);
+  const openingDate = show.promotion_start_date;
+  const showDate = show.show_time.slice(0, 10);
+  const dataAsOfDate = latestProjectDate || showDate;
+  const dayNumber = (value) => Date.parse(`${value}T00:00:00Z`) / 86400000;
+  const salesWindowDays = openingDate ? Math.max(dayNumber(showDate) - dayNumber(openingDate), 0) : null;
+  const salesElapsedDays = openingDate ? Math.min(Math.max(dayNumber(dataAsOfDate) - dayNumber(openingDate), 0), salesWindowDays) : null;
+  const timeProgressRate = salesWindowDays == null
+    ? null
+    : salesWindowDays === 0 ? 100 : round(salesElapsedDays / salesWindowDays * 100, 1);
+  const salesProgressGap = timeProgressRate == null || show.salesCompletionRate == null
+    ? null
+    : round(show.salesCompletionRate - timeProgressRate, 1);
+  const salesPaceIndex = !timeProgressRate || show.salesCompletionRate == null
+    ? null
+    : round(show.salesCompletionRate / timeProgressRate * 100, 1);
+  Object.assign(show, {
+    dataAsOfDate,
+    salesWindowDays,
+    salesElapsedDays,
+    daysToShow: Math.max(dayNumber(showDate) - dayNumber(dataAsOfDate), 0),
+    timeProgressRate,
+    salesProgressGap,
+    salesPaceIndex,
+    salesPaceStatus: salesPaceIndex == null ? null : salesPaceIndex >= 100 ? 'ahead' : salesPaceIndex >= 85 ? 'on_track' : 'behind',
+  });
+
   const timeline = db.prepare(`
     WITH RECURSIVE dates(day) AS (
       SELECT promotion_start_date FROM project_ledger WHERE id = ?

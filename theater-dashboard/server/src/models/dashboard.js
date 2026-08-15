@@ -13,13 +13,15 @@ function periodMetrics(db, start, end) {
     ), revenue_target AS (
       SELECT SUM(COALESCE(forecast_retail_revenue, target_revenue)) value FROM project_ledger
       WHERE id IN (SELECT project_id FROM active_projects) AND COALESCE(forecast_retail_revenue, target_revenue) IS NOT NULL
-    ), targeted_actuals AS (
+    ), cumulative_actuals AS (
       SELECT
         SUM(CASE WHEN p.expected_ticket_count IS NOT NULL AND o.is_work_ticket = 0 THEN o.total_tickets ELSE 0 END) sold_tickets,
+        SUM(CASE WHEN o.is_work_ticket = 1 THEN o.total_tickets ELSE 0 END) work_tickets,
+        SUM(o.total_tickets) total_issued_tickets,
         SUM(CASE WHEN COALESCE(p.forecast_retail_revenue, p.target_revenue) IS NOT NULL THEN o.total_face_amount ELSE 0 END) revenue
       FROM order_detail o
       JOIN project_ledger p ON p.id = o.project_id
-      WHERE o.order_date BETWEEN ? AND ?
+      WHERE o.project_id IN (SELECT project_id FROM active_projects) AND o.order_date <= ?
     )
     SELECT
       COALESCE(SUM(o.total_face_amount), 0) AS revenue,
@@ -30,11 +32,13 @@ function periodMetrics(db, start, end) {
       (SELECT value FROM capacity) AS capacity,
       (SELECT value FROM target) AS expected_tickets,
       (SELECT value FROM revenue_target) AS estimated_revenue,
-      (SELECT sold_tickets FROM targeted_actuals) AS targeted_sold_tickets,
-      (SELECT revenue FROM targeted_actuals) AS targeted_revenue
+      (SELECT sold_tickets FROM cumulative_actuals) AS cumulative_sold_tickets,
+      (SELECT work_tickets FROM cumulative_actuals) AS cumulative_work_tickets,
+      (SELECT total_issued_tickets FROM cumulative_actuals) AS cumulative_issued_tickets,
+      (SELECT revenue FROM cumulative_actuals) AS cumulative_revenue
     FROM order_detail o
     WHERE o.order_date BETWEEN ? AND ?
-  `).get(start, end, start, end, start, end);
+  `).get(start, end, end, start, end);
 }
 
 function change(current, previous) {
@@ -67,19 +71,19 @@ export function getSummary(db, query) {
     WHERE is_placeholder = 0 AND period_end >= ? AND period_start <= ?
   `).get(range.start, range.end);
 
-  const occupancy = current.capacity ? current.total_issued_tickets / current.capacity * 100 : 0;
-  const previousOccupancy = previous.capacity ? previous.total_issued_tickets / previous.capacity * 100 : 0;
-  const completion = current.expected_tickets ? current.targeted_sold_tickets / current.expected_tickets * 100 : 0;
-  const previousCompletion = previous.expected_tickets ? previous.targeted_sold_tickets / previous.expected_tickets * 100 : 0;
+  const occupancy = current.capacity ? current.cumulative_issued_tickets / current.capacity * 100 : 0;
+  const previousOccupancy = previous.capacity ? previous.cumulative_issued_tickets / previous.capacity * 100 : 0;
+  const completion = current.expected_tickets ? current.cumulative_sold_tickets / current.expected_tickets * 100 : 0;
+  const previousCompletion = previous.expected_tickets ? previous.cumulative_sold_tickets / previous.expected_tickets * 100 : 0;
   return {
     range,
     metrics: {
       totalRevenue: { value: round(current.revenue, 0), changePct: change(current.revenue, previous.revenue) },
-      workTickets: { value: current.work_tickets, changePct: null },
-      totalIssuedTickets: { value: current.total_issued_tickets, changePct: change(current.total_issued_tickets, previous.total_issued_tickets) },
+      workTickets: { value: current.cumulative_work_tickets, changePct: null },
+      totalIssuedTickets: { value: current.cumulative_issued_tickets, changePct: null },
       occupancyRate: { value: round(occupancy, 1), changePct: current.capacity && previous.capacity ? round(occupancy - previousOccupancy, 1) : null, available: Boolean(current.capacity), unit: 'percentage_point' },
       salesCompletionRate: { value: round(completion, 1), changePct: current.expected_tickets && previous.expected_tickets ? round(completion - previousCompletion, 1) : null, available: Boolean(current.expected_tickets), unit: 'percentage_point' },
-      boxOfficeCompletionRate: { value: current.estimated_revenue ? round(current.targeted_revenue / current.estimated_revenue * 100, 1) : 0, changePct: null, available: Boolean(current.estimated_revenue), unit: 'percentage_point' },
+      boxOfficeCompletionRate: { value: current.estimated_revenue ? round(current.cumulative_revenue / current.estimated_revenue * 100, 1) : 0, changePct: null, available: Boolean(current.estimated_revenue), unit: 'percentage_point' },
       mediaVolume: { value: round(publicity, 0), changePct: change(publicity, previousPublicity) },
       mediaFollowerGrowth: { value: media.follower_growth ?? 0, changePct: null, available: Boolean(media.follower_count) },
       mediaInteractions: { value: media.interactions ?? 0, changePct: null, available: Boolean(media.summary_count) },
