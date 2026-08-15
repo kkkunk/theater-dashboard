@@ -234,6 +234,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .pulse-revenue > small { color: #718071; font-size: 9px; }
 .pulse-metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 28px; }
 .pulse-metric-row > div { padding: 13px 14px; background: #f6f8f4; border: 1px solid rgba(24,53,37,.16); border-radius: 18px; }
+.pulse-metric-row > .formula-metric { position: relative; cursor: help; outline: none; transition: border-color .18s, background .18s; }
+.pulse-metric-row > .formula-metric:hover, .pulse-metric-row > .formula-metric:focus-visible { z-index: 3; background: #fbfcf8; border-color: rgba(24,53,37,.48); }
+.formula-metric::after { content: attr(data-formula); position: absolute; left: 50%; bottom: calc(100% + 9px); width: min(250px, 82vw); padding: 10px 12px; color: #f5f7f2; background: #183525; border: 1px solid rgba(255,255,255,.16); border-radius: 12px 12px 12px 4px; box-shadow: 0 10px 24px rgba(24,53,37,.2); font-size: 9px; line-height: 1.65; text-align: left; opacity: 0; pointer-events: none; transform: translate(-50%, 5px); transition: opacity .16s, transform .16s; }
+.formula-metric:hover::after, .formula-metric:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
 .pulse-metric-row span, .pulse-metric-row b, .pulse-metric-row small { display: block; }
 .pulse-metric-row span { color: #718071; font-size: 9px; }
 .pulse-metric-row b { margin: 7px 0 5px; color: #183525; font: 750 18px/1 ui-monospace, monospace; }
@@ -312,7 +316,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .healthy-state { color: #183525; }
 .show-card { min-height: 196px; padding: 17px; color: #183525; background: #eef0e9; border: 1px solid rgba(24,53,37,.32); border-radius: 26px 26px 26px 8px; }
 .show-card:hover { color: #f5f6f1; background: #183525; border-color: #183525; transform: translateY(-5px); }
-.show-card-accent { inset: auto 17px 14px; width: auto; height: 4px; border-radius: 4px; }
+.show-card-accent { inset: auto 17px 14px; width: auto; height: 4px; background: #183525; border-radius: 4px; }
+.show-card-top > span { color: #526353; }
 .show-card > strong { height: auto; color: inherit; font-size: 15px; line-height: 1.35; }
 .show-card > small, .progress-head { color: #718071; }
 .show-card > .show-card-subtitle { min-height: 25px; margin-top: 5px; white-space: normal; line-height: 1.4; }
@@ -321,6 +326,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .show-card-foot { color: #526353; }
 .show-card-top em.pending { color: #245e86; background: #dfeef5; }
 .progress { background: #d9ded4; }
+.progress i { background: #183525; }
 
 .completion-ranking { display: grid; gap: 5px; padding: 14px 16px 18px; }
 .completion-ranking button { display: grid; grid-template-columns: 28px minmax(120px, 1fr) minmax(70px, .72fr) 48px; align-items: center; gap: 10px; min-height: 36px; padding: 5px 7px; color: #183525; background: transparent; border: 0; border-radius: 18px; cursor: pointer; transition: background .18s, transform .18s; }

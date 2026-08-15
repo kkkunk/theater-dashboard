@@ -17,7 +17,6 @@ const analysisDays = 30;
 const trendDays = 365;
 const platformOptions = [{ value: 'all', label: '综合' }, { value: 'xiaohongshu', label: '小红书' }, { value: 'douyin', label: '抖音' }, { value: 'wechat', label: '公众号' }, { value: 'weibo', label: '微博' }, { value: 'video', label: '视频号' }] as const;
 const grainOptions = [{ value: 'day', label: '日' }, { value: 'week', label: '周' }, { value: 'month', label: '月' }] as const;
-const typeColors: Record<string, string> = { 音乐剧: '#183525', 戏剧: '#60755f', 舞剧: '#94a58b', 儿童剧: '#b5c7a7', 音乐会: '#496850', 戏曲: '#7f9076', 综艺: '#a5b59a' };
 const alertLabels: Record<string, string> = { low_occupancy: '上座率预警', sales_completion: '售票完成预警', box_office_completion: '票房完成预警', high_media_low_conversion: '转化效率预警' };
 
 export function OverviewPage() {
@@ -119,10 +118,10 @@ export function OverviewPage() {
         const pending = show.salesCompletionRate == null; const risk = show.salesCompletionRate != null && show.salesCompletionRate < 60; const attention = show.salesCompletionRate != null && show.salesCompletionRate < 80;
         const identity = showIdentity(show.name, show.title);
         return <motion.button key={show.id} className="show-card" onClick={() => navigate(`/shows/${show.id}`)} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * .025 }}>
-          <div className="show-card-accent" style={{ background: typeColors[show.type] || '#62a8ff' }} />
-          <div className="show-card-top"><span style={{ color: typeColors[show.type] || '#62a8ff' }}>{show.type}</span><em className={pending ? 'pending' : risk ? 'risk' : attention ? 'attention' : 'healthy'}>{pending ? '目标待补' : risk ? '风险' : attention ? '关注' : '健康'}</em></div>
+          <div className="show-card-accent" />
+          <div className="show-card-top"><span>{show.type}</span><em className={pending ? 'pending' : risk ? 'risk' : attention ? 'attention' : 'healthy'}>{pending ? '目标待补' : risk ? '风险' : attention ? '关注' : '健康'}</em></div>
           <strong>{identity.title}</strong>{identity.subtitle && <small className="show-card-subtitle">{identity.subtitle}</small>}<small className="show-card-date">{dateTimeLabel(show.showTime)} · {show.venue}</small>
-          <div className="progress-head"><span>目标进度</span><b>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</b></div><div className="progress"><i style={{ width: `${Math.min(show.salesCompletionRate ?? 0, 100)}%`, background: risk ? '#a95d50' : attention ? '#9a7642' : '#183525' }} /></div>
+          <div className="progress-head"><span>目标进度</span><b>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</b></div><div className="progress"><i style={{ width: `${Math.min(show.salesCompletionRate ?? 0, 100)}%` }} /></div>
           <div className="show-card-foot"><span>总出票 {formatNumber(show.totalIssuedTickets)} · 工作票 {formatNumber(show.workTickets)}</span><span>宣传量 {formatNumber(show.mediaVolume)}</span></div>
         </motion.button>;
       })}</div>}

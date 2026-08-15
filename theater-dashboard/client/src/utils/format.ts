@@ -18,18 +18,12 @@ export function dateTimeLabel(value: string) {
 }
 
 export function showIdentity(fullName: string, shortName?: string | null) {
-  const title = shortName?.trim() || fullName.trim();
+  const sourceName = shortName?.trim() || fullName.trim();
+  const bracketedTitle = sourceName.match(/《[^》]+》/)?.[0] || fullName.match(/《[^》]+》/)?.[0];
+  const title = bracketedTitle || sourceName;
   if (!fullName || fullName.trim() === title) return { title, subtitle: '' };
 
   let subtitle = fullName.replace(title, ' ');
-  if (subtitle === fullName) {
-    const bracketedTitle = title.match(/《[^》]+》/)?.[0];
-    if (bracketedTitle && fullName.includes(bracketedTitle)) {
-      subtitle = fullName.replace(bracketedTitle, ' ');
-      const titlePrefix = title.replace(bracketedTitle, '').trim();
-      if (titlePrefix) subtitle = subtitle.replace(titlePrefix, ' ');
-    }
-  }
 
   subtitle = subtitle.replace(/\s+/g, ' ').trim();
   return { title, subtitle: subtitle === title ? '' : subtitle };
