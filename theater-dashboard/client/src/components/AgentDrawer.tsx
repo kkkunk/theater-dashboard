@@ -22,10 +22,10 @@ function getInsightDemo(question: string): AgentResult | null {
         rows: [
           { term: '#0528音乐剧', views: 118_600 },
           { term: '#音乐剧0528', views: 104_200 },
-          { term: '小鬼屋VS大鬼屋', views: 68_800 },
-          { term: '镜框版舞美升级', views: 46_300 },
-          { term: 'Eggy角色曲《丑角》', views: 39_800 },
-          { term: '360度转台', views: 35_200 },
+          { term: '#小鬼屋VS大鬼屋', views: 68_800 },
+          { term: '#镜框版舞美升级', views: 46_300 },
+          { term: '#Eggy角色曲《丑角》', views: 39_800 },
+          { term: '#360度转台', views: 35_200 },
         ],
         conclusion: '剧名话题仍是主要入口，用户也明显关注“小鬼屋VS大鬼屋”、舞美升级、角色曲和 360 度转台等舞台记忆点。建议围绕这些具体内容资产拆分短视频和图文选题，并与剧名话题组合发布。',
       }
