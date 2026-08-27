@@ -24,7 +24,7 @@ export function TrendDetailPage() {
     return ({
     animationDuration: 650,
     color: ['#183525', '#94a58b'],
-    tooltip: { ...tooltip, trigger: 'axis' as const, valueFormatter: (value: unknown) => value == null || value === '-' || !Number.isFinite(Number(value)) ? '暂无数据' : formatNumber(Number(value)) },
+    tooltip: { ...tooltip, trigger: 'axis' as const, valueFormatter: (value: unknown) => value == null || value === '-' || !Number.isFinite(Number(value)) ? '-' : formatNumber(Number(value)) },
     legend: { top: 0, right: 0, textStyle: { color: chartText }, itemWidth: 18, itemHeight: 3 },
     grid: { top: 48, left: 58, right: 62, bottom: 68 },
     xAxis: { type: 'category' as const, boundaryGap: false, data: trendRows.map((row) => shortDate(row.date)), axisLine: { lineStyle: { color: chartGrid } }, axisTick: { show: false }, axisLabel: { color: chartText, fontSize: 11, hideOverlap: true } },
@@ -34,7 +34,7 @@ export function TrendDetailPage() {
     ],
     dataZoom: [
       { type: 'inside' as const, startValue, endValue: Math.max(trendRows.length - 1, 0), zoomOnMouseWheel: true, moveOnMouseWheel: true, moveOnMouseMove: true },
-      { type: 'slider' as const, startValue, endValue: Math.max(trendRows.length - 1, 0), height: 20, bottom: 9, brushSelect: false, borderColor: 'transparent', backgroundColor: '#eef0e9', fillerColor: 'rgba(36,94,134,.18)', handleSize: 20, handleStyle: { color: '#245e86', borderColor: '#fff', borderWidth: 2 }, moveHandleStyle: { color: '#245e86' }, dataBackground: { lineStyle: { color: '#94a58b', opacity: .45 }, areaStyle: { color: '#dfe7da', opacity: .55 } }, selectedDataBackground: { lineStyle: { color: '#245e86' }, areaStyle: { color: '#a9c8d9', opacity: .5 } }, textStyle: { color: chartText, fontSize: 9 } },
+      { type: 'slider' as const, startValue, endValue: Math.max(trendRows.length - 1, 0), height: 20, bottom: 9, brushSelect: false, borderColor: 'transparent', backgroundColor: '#eef0e9', fillerColor: 'rgba(36,94,134,.18)', handleSize: 20, handleStyle: { color: '#245e86', borderColor: '#fff', borderWidth: 2 }, moveHandleStyle: { color: '#245e86' }, dataBackground: { lineStyle: { color: '#94a58b', opacity: .45 }, areaStyle: { color: '#dfe7da', opacity: .55 } }, selectedDataBackground: { lineStyle: { color: '#245e86' }, areaStyle: { color: '#a9c8d9', opacity: .5 } }, textStyle: { color: chartText, fontSize: 11 } },
     ],
     series: [
       { name: '日票房', type: 'line' as const, smooth: .32, symbol: 'circle', showSymbol: false, data: trendRows.map((row) => row.revenue), lineStyle: { width: 3 }, areaStyle: { color: 'rgba(148,165,139,.12)' } },
@@ -51,7 +51,7 @@ export function TrendDetailPage() {
     </Panel>
 
     <Panel title="每日明细" eyebrow="最近日期优先" action={<span className="range-note"><CalendarDays size={14} />{trends.data?.rows.length || 0} 日</span>} className="trend-detail-table-panel">
-      {trends.isLoading ? <LoadingState /> : trends.error ? <ErrorState message={trends.error.message} onRetry={() => trends.refetch()} /> : trends.data?.rows.length ? <div className="trend-detail-table-wrap"><table className="trend-detail-table"><thead><tr><th>日期</th><th>日票房</th><th>付费售票</th><th>订单数</th><th>宣传内容数</th></tr></thead><tbody>{[...trends.data.rows].reverse().map((row) => <tr key={row.date}><td><strong>{shortDate(row.date)}</strong><small>{row.date}</small></td><td><b>{formatCurrency(row.revenue)}</b></td><td><b>{formatNumber(row.tickets)}</b><span>张</span></td><td><b>{formatNumber(row.orders)}</b><span>单</span></td><td>{row.mediaVolume == null ? <em>暂无数据</em> : <><b>{formatNumber(row.mediaVolume)}</b><span>条</span></>}</td></tr>)}</tbody></table></div> : <EmptyState />}
+      {trends.isLoading ? <LoadingState /> : trends.error ? <ErrorState message={trends.error.message} onRetry={() => trends.refetch()} /> : trends.data?.rows.length ? <div className="trend-detail-table-wrap"><table className="trend-detail-table"><thead><tr><th>日期</th><th>日票房</th><th>付费售票</th><th>订单数</th><th>宣传内容数</th></tr></thead><tbody>{[...trends.data.rows].reverse().map((row) => <tr key={row.date}><td><strong>{shortDate(row.date)}</strong><small>{row.date}</small></td><td><b>{formatCurrency(row.revenue)}</b></td><td><b>{formatNumber(row.tickets)}</b><span>张</span></td><td><b>{formatNumber(row.orders)}</b><span>单</span></td><td>{row.mediaVolume == null ? <em>-</em> : <><b>{formatNumber(row.mediaVolume)}</b><span>条</span></>}</td></tr>)}</tbody></table></div> : <EmptyState />}
     </Panel>
   </div>;
 }

@@ -66,5 +66,11 @@ export type StrategyReview = {
 export type AgentResult = {
   answer: string;
   visualization: { type: string; rows: Array<Record<string, string | number | null>> };
-  meta: { intent: string; mode: string; range?: DateRange };
+  meta: {
+    intent: string; mode: string; range?: DateRange;
+    insight?: {
+      subject: string; totalViews: number; conclusion: string;
+      rows: Array<{ term: string; views: number }>;
+    };
+  };
 };

@@ -36,7 +36,7 @@ export function ReviewsPage() {
     grid: { top: 20, left: 56, right: 28, bottom: 46 },
     xAxis: { type: 'value' as const, name: '累计投入', nameLocation: 'middle' as const, nameGap: 30, nameTextStyle: { color: chartText }, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => `${value / 10000}万` } },
     yAxis: { type: 'value' as const, name: '影响金额', nameTextStyle: { color: chartText }, splitLine: { lineStyle: { color: chartGrid } }, axisLabel: { color: chartText, formatter: (value: number) => `${value / 10000}万` } },
-    series: [{ type: 'scatter' as const, symbolSize: (value: number[]) => 18 + value[2] * 3, data: strategies.data?.rows.map((row) => ({ name: row.strategyType, category: row.category, value: [row.totalCost, row.impactAmount, row.usageCount], itemStyle: { color: strategyColors[row.category] || '#94a58b', borderColor: '#183525', borderWidth: 1 }, label: { show: row.usageCount >= 8, formatter: row.strategyType, position: 'top' as const, color: '#526353', fontSize: 10 } })) }],
+    series: [{ type: 'scatter' as const, symbolSize: (value: number[]) => 18 + value[2] * 3, data: strategies.data?.rows.map((row) => ({ name: row.strategyType, category: row.category, value: [row.totalCost, row.impactAmount, row.usageCount], itemStyle: { color: strategyColors[row.category] || '#94a58b', borderColor: '#183525', borderWidth: 1 }, label: { show: row.usageCount >= 8, formatter: row.strategyType, position: 'top' as const, color: '#526353', fontSize: 12 } })) }],
   }), [strategies.data]);
 
   const totalChannelRevenue = channels.data?.rows.reduce((sum, row) => sum + row.revenue, 0) || 0;
@@ -47,9 +47,9 @@ export function ReviewsPage() {
 
     <div className="review-summary">
       <article><span><Target size={16} />渠道总票房</span><strong>{formatCurrency(totalChannelRevenue, true)}</strong><small>{channels.data?.rows.length || 0} 个有效渠道</small></article>
-      <article><span><Sparkles size={16} />平均策略 ROI</span><strong>{validStrategies ? `${(averageRoi / validStrategies).toFixed(1)}×` : '暂无数据'}</strong><small>不含零成本策略</small></article>
+      <article><span><Sparkles size={16} />平均策略 ROI</span><strong>{validStrategies ? `${(averageRoi / validStrategies).toFixed(1)}×` : '-'}</strong><small>不含零成本策略</small></article>
       <article><span><Medal size={16} />最佳渠道</span><strong>{channels.data?.rows[0]?.channel || '—'}</strong><small>贡献 {channels.data?.rows[0]?.sharePct || 0}% 票房</small></article>
-      <article><span><Lightbulb size={16} />最佳策略</span><strong>{strategies.data?.rows[0]?.strategyType || '暂无数据'}</strong><small>{strategies.data?.rows[0]?.roi == null ? '待补策略投入与影响金额' : `ROI ${strategies.data.rows[0].roi}×`}</small></article>
+      <article><span><Lightbulb size={16} />最佳策略</span><strong>{strategies.data?.rows[0]?.strategyType || '-'}</strong><small>{strategies.data?.rows[0]?.roi == null ? '待补策略投入与影响金额' : `ROI ${strategies.data.rows[0].roi}×`}</small></article>
     </div>
 
     <div className="review-grid">

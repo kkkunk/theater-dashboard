@@ -35,7 +35,7 @@ export function ShowDetailPage() {
         { type: 'value' as const, name: '日声量', nameTextStyle: { color: chartText }, splitLine: { show: false }, axisLabel: { color: chartText } },
       ],
       series: [
-        { name: '累计票房', type: 'line' as const, smooth: .25, showSymbol: false, data: data?.timeline.map((row) => row.cumulativeRevenue), lineStyle: { width: 3 }, areaStyle: { color: 'rgba(148,165,139,.13)' }, markLine: { silent: true, symbol: 'none', label: { color: '#7b6a3f', formatter: '{b}', fontSize: 10 }, lineStyle: { color: 'rgba(123,106,63,.55)', type: 'dashed' as const }, data: data?.strategyEvents.map((event) => ({ name: event.type, xAxis: shortDate(event.startDate) })) } },
+        { name: '累计票房', type: 'line' as const, smooth: .25, showSymbol: false, data: data?.timeline.map((row) => row.cumulativeRevenue), lineStyle: { width: 3 }, areaStyle: { color: 'rgba(148,165,139,.13)' }, markLine: { silent: true, symbol: 'none', label: { color: '#7b6a3f', formatter: '{b}', fontSize: 12 }, lineStyle: { color: 'rgba(123,106,63,.55)', type: 'dashed' as const }, data: data?.strategyEvents.map((event) => ({ name: event.type, xAxis: shortDate(event.startDate) })) } },
         { name: '宣传内容数', type: 'bar' as const, yAxisIndex: 1, barMaxWidth: 11, data: data?.timeline.map((row) => row.mediaVolume), itemStyle: { color: '#B9D9B8', borderColor: '#183525', borderWidth: 1, borderRadius: [7, 7, 0, 0] } },
       ],
     };
@@ -62,17 +62,17 @@ export function ShowDetailPage() {
     ? null
     : show.salesCompletionRate > 100 ? show.soldTickets - show.expectedTickets : show.remainingGoal;
   const paceLabel = show.salesPaceStatus === 'ahead' ? '领先计划' : show.salesPaceStatus === 'on_track' ? '基本同步' : show.salesPaceStatus === 'behind' ? '落后计划' : '暂无判断';
-  const progressGapLabel = show.salesProgressGap == null ? '暂无数据' : `${show.salesProgressGap > 0 ? '+' : ''}${show.salesProgressGap} 个百分点`;
+  const progressGapLabel = show.salesProgressGap == null ? '-' : `${show.salesProgressGap > 0 ? '+' : ''}${show.salesProgressGap} 个百分点`;
 
   return <div className="page show-detail-page">
     <button className="back-link" onClick={() => navigate('/')}><ArrowLeft size={15} />返回总览</button>
     <PageHeader eyebrow="单场项目复盘" title={identity.title} description={identity.subtitle || `${show.performance_type}演出`} onOpenAgent={openAgent} action={<label className="show-select"><span>切换演出</span><select value={id} onChange={(event) => navigate(`/shows/${event.target.value}`)}>{shows.data?.map((item) => { const itemIdentity = showIdentity(item.name, item.title); return <option key={item.id} value={item.id}>{itemIdentity.subtitle ? `${itemIdentity.title}｜${itemIdentity.subtitle}` : itemIdentity.title}</option>; })}</select><ChevronDown size={14} /></label>} />
 
     <section className="show-hero">
-      <div className="show-identity"><span className="type-kicker">{show.performance_type}</span><h2>{identity.title}</h2>{identity.subtitle && <p className="show-subtitle">{identity.subtitle}</p>}<div className="show-meta"><span><Building2 size={15} />{show.troupe_name || '暂无数据'}</span><span><Users size={15} />{[show.director, show.lead_actor].filter(Boolean).join(' · ') || '暂无数据'}</span><span><MapPin size={15} />{show.venue || '暂无数据'}</span><span><CalendarDays size={15} />{dateTimeLabel(show.show_time)}</span></div></div>
-      <div className="show-score"><strong>{show.boxOfficeCompletionRate == null ? '暂无数据' : `${show.boxOfficeCompletionRate}%`}</strong><span>票房完成度</span></div>
+      <div className="show-identity"><span className="type-kicker">{show.performance_type}</span><h2>{identity.title}</h2>{identity.subtitle && <p className="show-subtitle">{identity.subtitle}</p>}<div className="show-meta"><span><Building2 size={15} />{show.troupe_name || '-'}</span><span><Users size={15} />{[show.director, show.lead_actor].filter(Boolean).join(' · ') || '-'}</span><span><MapPin size={15} />{show.venue || '-'}</span><span><CalendarDays size={15} />{dateTimeLabel(show.show_time)}</span></div></div>
+      <div className="show-score"><strong>{show.boxOfficeCompletionRate == null ? '-' : `${show.boxOfficeCompletionRate}%`}</strong><span>票房完成度</span></div>
       <div className="hero-metric"><span>累计票房</span><strong>{formatCurrency(show.revenue, true)}</strong><small>{formatNumber(show.soldTickets)} 张票</small></div>
-      <div className="hero-metric"><span>上座率完成度</span><strong className={show.occupancyRate != null && show.occupancyRate < 60 ? 'danger-text' : ''}>{show.occupancyRate == null ? '暂无数据' : `${show.occupancyRate}%`}</strong><small>{show.capacity == null ? '缺少可出票数' : `总出票 ${formatNumber(show.totalIssuedTickets)} / 可出票 ${formatNumber(show.capacity)}`}</small></div>
+      <div className="hero-metric"><span>上座率完成度</span><strong className={show.occupancyRate != null && show.occupancyRate < 60 ? 'danger-text' : ''}>{show.occupancyRate == null ? '-' : `${show.occupancyRate}%`}</strong><small>{show.capacity == null ? '缺少可出票数' : `总出票 ${formatNumber(show.totalIssuedTickets)} / 可出票 ${formatNumber(show.capacity)}`}</small></div>
       <div className="hero-metric"><span>售票完成率</span><strong className={show.salesCompletionRate != null && show.salesCompletionRate < 60 ? 'danger-text' : ''}>{show.salesCompletionRate == null ? '暂无目标' : `${show.salesCompletionRate}%`}</strong><small>{show.expectedTickets ? `目标 ${formatNumber(show.expectedTickets)} 张` : '目标售票数待补'}</small></div>
     </section>
 

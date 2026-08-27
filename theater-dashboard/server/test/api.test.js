@@ -43,6 +43,12 @@ test('dashboard endpoints return frontend-ready data', async () => {
   }
 });
 
+test('anomaly radar includes every upcoming-show risk', async () => {
+  const { response, body } = await get('/api/dashboard/alerts');
+  assert.equal(response.status, 200);
+  assert.ok(body.data.some((alert) => alert.projectId === 7 && alert.type === 'upcoming_sales_risk'));
+});
+
 test('show list and detail expose all analysis sections', async () => {
   const list = await get('/api/shows');
   assert.equal(list.body.data.length, 8);

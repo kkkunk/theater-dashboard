@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <aside className={`sidebar ${mobileNav ? 'open' : ''}`}>
       <div className="brand">
         <div className="brand-mark" aria-hidden="true"><span /><span /><span /></div>
-        <div><strong>演析</strong><small>营销数据看板</small></div>
+        <div><strong>演Xi</strong><small>营销数据看板</small></div>
         <button className="icon-button close-nav" onClick={() => setMobileNav(false)} aria-label="关闭导航"><X size={18} /></button>
       </div>
       <nav aria-label="主导航">
@@ -41,8 +41,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     <main className="main-content">
       <div className="mobile-bar">
         <button className="icon-button" onClick={() => setMobileNav(true)} aria-label="打开导航"><Menu size={20} /></button>
-        <div className="mobile-brand"><Sparkles size={16} />演析</div>
-        <button className="icon-button" onClick={openAgent} aria-label="打开智能问数"><Bot size={20} /></button>
+        <div className="mobile-brand"><Sparkles size={16} />演Xi</div>
+        <button className="icon-button" onClick={openAgent} aria-label="打开演Xi助手"><Bot size={20} /></button>
       </div>
       {children}
     </main>

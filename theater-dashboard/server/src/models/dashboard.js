@@ -230,13 +230,30 @@ export function getAlerts(db) {
     if (show.totalIssuedTickets > 0 && show.occupancyRate != null && show.occupancyRate < 60) alerts.push({ projectId: show.id, level: show.occupancyRate < 40 ? 'high' : 'medium', type: 'low_occupancy', message: `${show.name}上座率完成度仅 ${show.occupancyRate}%` });
     if (show.mediaVolume > 700 && show.salesCompletionRate != null && show.salesCompletionRate < 75) alerts.push({ projectId: show.id, level: show.salesCompletionRate < 50 ? 'high' : 'medium', type: 'high_media_low_conversion', message: `${show.name}宣传量较高，但售票完成率仅 ${show.salesCompletionRate}%` });
     const daysToShow = Math.ceil((new Date(show.showTime.slice(0, 10)) - new Date(referenceDate)) / 86400000);
+    const salesRisk = getUpcomingSalesRisk(show.salesCompletionRate, daysToShow);
+    if (salesRisk) {
+      alerts.push({ projectId: show.id, level: salesRisk.level, type: 'upcoming_sales_risk', message: `${show.name}距演出 ${daysToShow} 天，售票完成率 ${show.salesCompletionRate}%，低于 ${salesRisk.threshold}% 风险线` });
+    }
     if (daysToShow >= 0 && daysToShow <= 21) {
-      const classify = (value) => value < 20 ? 'high' : value < 35 ? 'medium' : value < 50 ? 'low' : null;
-      const salesLevel = show.expectedTickets ? classify(show.salesCompletionRate) : null;
-      if (salesLevel) alerts.push({ projectId: show.id, level: salesLevel, type: 'sales_completion', message: `${show.name}距演出 ${daysToShow} 天，售票完成率 ${show.salesCompletionRate}%` });
       const revenueLevel = show.estimatedRevenue ? classify(show.boxOfficeCompletionRate) : null;
       if (revenueLevel) alerts.push({ projectId: show.id, level: revenueLevel, type: 'box_office_completion', message: `${show.name}距演出 ${daysToShow} 天，票房完成度 ${show.boxOfficeCompletionRate}%` });
     }
     return alerts;
   });
+}
+
+function classify(value) {
+  return value < 20 ? 'high' : value < 35 ? 'medium' : value < 50 ? 'low' : null;
+}
+
+// This mirrors the status shown on upcoming-show cards so every visible "风险"
+// is also actionable from the anomaly radar.
+function getUpcomingSalesRisk(completionRate, daysToShow) {
+  if (completionRate == null || daysToShow < 0 || daysToShow > 60) return null;
+  const threshold = daysToShow <= 7 ? 75 : daysToShow <= 21 ? 50 : daysToShow <= 30 ? 40 : 30;
+  if (completionRate >= threshold) return null;
+  return {
+    threshold,
+    level: completionRate < threshold * 0.5 ? 'high' : completionRate < threshold * 0.78 ? 'medium' : 'low',
+  };
 }
